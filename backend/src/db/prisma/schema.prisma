@@ -1,0 +1,224 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum JobSource {
+  ADZUNA
+  REMOTIVE
+  THEMUSE
+  LINKEDIN
+  MANUAL
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  REMOTE
+  INTERNSHIP
+}
+
+enum ExperienceLevel {
+  ENTRY
+  MID
+  SENIOR
+  LEAD
+  EXECUTIVE
+}
+
+enum ApplicationStatus {
+  QUEUED
+  APPLYING
+  APPLIED
+  FAILED
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+enum ApplicationMethod {
+  AUTO
+  MANUAL
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  name            String
+  supabase_id     String?  @unique
+  password_hash   String?  // For local auth demo
+  is_premium      Boolean  @default(false)
+  daily_apply_limit Int    @default(10)
+  avatar_url      String?
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  // Relations
+  resumes         Resume[]
+  preferences     Preference?
+  job_matches     JobMatch[]
+  applications    Application[]
+  schedules       Schedule[]
+
+  @@map("users")
+}
+
+model Resume {
+  id          String   @id @default(uuid())
+  user_id     String
+  file_url    String
+  file_name   String
+  raw_text    String?  @db.Text
+  parsed_data Json?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
+
+  // Relations
+  user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  job_matches  JobMatch[]
+  applications Application[]
+
+  @@map("resumes")
+}
+
+model Preference {
+  id                  String          @id @default(uuid())
+  user_id             String          @unique
+  target_roles        String[]        @default([])
+  target_locations    String[]        @default([])
+  min_salary          Int?
+  max_salary          Int?
+  job_types           JobType[]       @default([])
+  experience_level    ExperienceLevel @default(MID)
+  blacklisted_companies String[]      @default([])
+  preferred_companies String[]        @default([])
+  auto_apply_enabled  Boolean         @default(false)
+  min_match_score     Int             @default(70)
+  updated_at          DateTime        @updatedAt
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("preferences")
+}
+
+model Job {
+  id           String     @id @default(uuid())
+  external_id  String     @unique
+  source       JobSource
+  title        String
+  company      String
+  location     String
+  job_type     JobType    @default(FULL_TIME)
+  description  String     @db.Text
+  requirements String?    @db.Text
+  salary_min   Int?
+  salary_max   Int?
+  apply_url    String
+  posted_at    DateTime   @default(now())
+  expires_at   DateTime?
+  is_active    Boolean    @default(true)
+  created_at   DateTime   @default(now())
+
+  // Relations
+  job_matches  JobMatch[]
+  applications Application[]
+
+  @@index([source, is_active, posted_at])
+  @@map("jobs")
+}
+
+model JobMatch {
+  id            String   @id @default(uuid())
+  user_id       String
+  job_id        String
+  resume_id     String
+  match_score   Int
+  match_reasons Json?
+  is_seen       Boolean  @default(false)
+  is_saved      Boolean  @default(false)
+  created_at    DateTime @default(now())
+
+  // Relations
+  user         User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  job          Job           @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  resume       Resume        @relation(fields: [resume_id], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@unique([user_id, job_id, resume_id])
+  @@index([user_id, match_score(sort: Desc)])
+  @@map("job_matches")
+}
+
+model Application {
+  id                 String            @id @default(uuid())
+  user_id            String
+  job_id             String
+  resume_id          String
+  match_id           String?
+  status             ApplicationStatus @default(QUEUED)
+  applied_at         DateTime?
+  cover_letter       String?           @db.Text
+  application_method ApplicationMethod @default(MANUAL)
+  failure_reason     String?
+  notes              String?           @db.Text
+  follow_up_date     DateTime?
+  screenshot_url     String?
+  created_at         DateTime          @default(now())
+  updated_at         DateTime          @updatedAt
+
+  // Relations
+  user  User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  job   Job           @relation(fields: [job_id], references: [id])
+  resume Resume       @relation(fields: [resume_id], references: [id])
+  match JobMatch?     @relation(fields: [match_id], references: [id])
+  logs  ApplicationLog[]
+
+  @@index([user_id, status])
+  @@map("applications")
+}
+
+model ApplicationLog {
+  id             String      @id @default(uuid())
+  application_id String
+  event          String
+  metadata       Json?
+  screenshot_url String?
+  created_at     DateTime    @default(now())
+
+  // Relations
+  application Application @relation(fields: [application_id], references: [id], onDelete: Cascade)
+
+  @@map("application_logs")
+}
+
+model Schedule {
+  id               String   @id @default(uuid())
+  user_id          String
+  name             String
+  cron_expression  String
+  max_applications Int      @default(5)
+  is_active        Boolean  @default(true)
+  last_run         DateTime?
+  next_run         DateTime?
+  created_at       DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("schedules")
+}
