@@ -1,7 +1,36 @@
 'use client';
 // components/dashboard/StatsCard.jsx
+import { useEffect, useState } from 'react';
+import { motion, animate } from 'framer-motion';
 import { TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
+
+function AnimatedCounter({ value }) {
+  const [displayVal, setDisplayVal] = useState('0');
+
+  useEffect(() => {
+    const stringVal = String(value);
+    const hasPercent = stringVal.endsWith('%');
+    const numericPart = parseFloat(stringVal.replace(/[^0-9.]/g, ''));
+
+    if (isNaN(numericPart)) {
+      setDisplayVal(value);
+      return;
+    }
+
+    const controls = animate(0, numericPart, {
+      duration: 1.2,
+      ease: 'easeOut',
+      onUpdate: (val) => {
+        setDisplayVal(Math.round(val) + (hasPercent ? '%' : ''));
+      },
+    });
+
+    return () => controls.stop();
+  }, [value]);
+
+  return <span>{displayVal}</span>;
+}
 
 export default function StatsCard({ title, value, subtitle, icon: Icon, trend, color = 'primary' }) {
   const colorMap = {
@@ -12,10 +41,14 @@ export default function StatsCard({ title, value, subtitle, icon: Icon, trend, c
   };
 
   return (
-    <div className="card-hover group">
+    <motion.div
+      whileHover={{ scale: 1.025, translateY: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className="card-hover group cursor-pointer"
+    >
       <div className="flex items-start justify-between mb-4">
-        <div className={clsx('w-10 h-10 rounded-lg flex items-center justify-center border', colorMap[color])}>
-          <Icon className="w-5 h-5" />
+        <div className={clsx('w-10 h-10 rounded-lg flex items-center justify-center border transition-colors duration-300 group-hover:border-primary/50 group-hover:bg-primary/20', colorMap[color])}>
+          <Icon className="w-5 h-5 transition-transform duration-300 group-hover:scale-110" />
         </div>
         {trend !== undefined && (
           <div className={clsx(
@@ -29,10 +62,11 @@ export default function StatsCard({ title, value, subtitle, icon: Icon, trend, c
       </div>
 
       <p className="text-3xl font-bold text-text mb-1">
-        {value}
+        <AnimatedCounter value={value} />
       </p>
       <p className="text-sm font-medium text-text-muted">{title}</p>
       {subtitle && <p className="text-xs text-text-subtle mt-1">{subtitle}</p>}
-    </div>
+    </motion.div>
   );
 }
+

@@ -1,6 +1,7 @@
 'use client';
 // app/dashboard/page.jsx — Main dashboard
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Send, Calendar, TrendingUp, Target, Lightbulb, RefreshCcw, Zap } from 'lucide-react';
 import StatsCard from '@/components/dashboard/StatsCard';
 import ActivityFeed from '@/components/dashboard/ActivityFeed';
@@ -63,10 +64,34 @@ export default function DashboardPage() {
   };
   const displayStats = stats || DEMO_STATS;
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    show: { 
+      opacity: 1, 
+      y: 0, 
+      transition: { type: 'spring', stiffness: 260, damping: 22 } 
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-text">Overview</h2>
           <p className="text-text-muted text-sm mt-0.5">Your job search at a glance</p>
@@ -80,10 +105,10 @@ export default function DashboardPage() {
           <RefreshCcw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           Refresh Jobs
         </button>
-      </div>
+      </motion.div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {loading ? (
           [...Array(4)].map((_, i) => <div key={i} className="card h-28 skeleton" />)
         ) : (
@@ -121,10 +146,10 @@ export default function DashboardPage() {
             />
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* Chart + Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Chart */}
         <div className="lg:col-span-2 card">
           <div className="flex items-center justify-between mb-4">
@@ -145,11 +170,11 @@ export default function DashboardPage() {
             <ActivityFeed activities={activity} loading={loading} />
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* AI Insights */}
       {insights.length > 0 && (
-        <div className="card">
+        <motion.div variants={itemVariants} className="card">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 bg-warning/10 border border-warning/20 rounded-lg flex items-center justify-center">
               <Lightbulb className="w-4 h-4 text-warning" />
@@ -170,11 +195,11 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Auto-Apply Status */}
-      <div className="card bg-gradient-to-r from-primary/10 via-card to-card border-primary/20">
+      <motion.div variants={itemVariants} className="card bg-gradient-to-r from-primary/10 via-card to-card border-primary/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
@@ -190,7 +215,7 @@ export default function DashboardPage() {
             <span className="text-sm text-success font-medium">Running</span>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
