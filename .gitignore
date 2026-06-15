@@ -40,3 +40,5 @@ scratch/
 *.sw?
 .DS_Store
 Thumbs.db
+
+.vercel
