@@ -117,7 +117,21 @@ async function applyGeneric(page, { resumeData, coverLetter, jobData, onLog }) {
     await log('Generic: Fields filled', { filled, total: formFields.length });
 
     // Find and click submit
-    const submitBtn = await page.$('button[type="submit"], input[type="submit"], button:has-text("Submit"), button:has-text("Apply"), button:has-text("Send Application")');
+    let submitBtn = null;
+    const buttons = await page.$$('button[type="submit"], input[type="submit"], button:has-text("Submit"), button:has-text("Apply"), button:has-text("Send Application")');
+    for (const btn of buttons) {
+      if (await btn.isVisible()) {
+        const text = (await btn.textContent()) || '';
+        const id = (await btn.getAttribute('id')) || '';
+        const cls = (await btn.getAttribute('class')) || '';
+        // Skip the main apply button we already clicked
+        if (text.toLowerCase().includes('apply now') || id.includes('apply-btn') || cls.includes('apply-btn') || cls.includes('jobs-apply-button')) {
+          continue;
+        }
+        submitBtn = btn;
+        break;
+      }
+    }
 
     if (!submitBtn) {
       return { success: false, error: 'Submit button not found' };

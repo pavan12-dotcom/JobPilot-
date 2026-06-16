@@ -41,13 +41,13 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
 
       // Fill work experience fields
       const yoeField = await page.$('input[id*="years"], input[id*="experience"]');
-      if (yoeField) {
+      if (yoeField && await yoeField.isVisible()) {
         await yoeField.fill(String(resumeData.total_experience_years || 3));
       }
 
       // Paste cover letter if field exists
       const coverLetterField = await page.$('textarea[id*="cover"], textarea[name*="cover"]');
-      if (coverLetterField && coverLetter) {
+      if (coverLetterField && coverLetter && await coverLetterField.isVisible()) {
         await coverLetterField.click();
         await humanDelay(200, 500);
         await coverLetterField.fill(coverLetter);
@@ -59,7 +59,7 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
       const reviewBtn = await page.$('button[aria-label="Review your application"]');
       const submitBtn = await page.$('button[aria-label="Submit application"]');
 
-      if (submitBtn) {
+      if (submitBtn && await submitBtn.isVisible()) {
         await humanDelay(1000, 2000);
         await submitBtn.click();
         await humanDelay(2000, 3000);
@@ -68,10 +68,10 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
         // Check for confirmation
         const confirmation = await page.$('.artdeco-inline-feedback--success, .jobs-post-apply-feedback');
         return { success: true, method: 'linkedin-easy-apply', hasConfirmation: !!confirmation };
-      } else if (reviewBtn) {
+      } else if (reviewBtn && await reviewBtn.isVisible()) {
         await reviewBtn.click();
         await humanDelay(1000, 1500);
-      } else if (nextBtn) {
+      } else if (nextBtn && await nextBtn.isVisible()) {
         await nextBtn.click();
         await humanDelay(1000, 2000);
         step++;
@@ -97,7 +97,7 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
 async function fillLinkedInField(page, selector, value) {
   if (!value) return;
   const field = await page.$(selector);
-  if (field) {
+  if (field && await field.isVisible()) {
     await field.click();
     await humanDelay(100, 300);
     await field.fill(value);

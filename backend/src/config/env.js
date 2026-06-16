@@ -20,6 +20,9 @@ const envSchema = z.object({
   // Claude AI
   ANTHROPIC_API_KEY: z.string().optional().default(''),
 
+  // Gemini AI
+  GEMINI_API_KEY: z.string().optional().default(''),
+
   // Job APIs
   ADZUNA_APP_ID: z.string().optional().default(''),
   ADZUNA_APP_KEY: z.string().optional().default(''),

@@ -10,6 +10,8 @@ import SavedScreen from './screens/SavedScreen';
 import DetailScreen from './screens/DetailScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
+import { supabase } from '@/lib/supabase';
+import { authApi } from '@/lib/api';
 
 const NO_NAV = ['splash', 'login', 'onboarding', 'detail', 'notifications'];
 const MAIN_TABS = ['home', 'search', 'saved', 'profile'];
@@ -22,8 +24,51 @@ export default function JobPilotApp() {
   const [time, setTime] = useState('9:41');
   const [toast, setToast] = useState({ show: false, msg: '' });
   const [selectedJob, setSelectedJob] = useState(null);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const toastTimeout = useRef(null);
   const hist = useRef(['splash']);
+
+  // Viewport resize listener & mount check
+  useEffect(() => {
+    setMounted(true);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sync Supabase Auth session
+  useEffect(() => {
+    if (!supabase) return;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session) {
+        const token = session.access_token;
+        localStorage.setItem('applyai_token', token);
+        
+        try {
+          const userRes = await authApi.me();
+          const userObj = userRes.data;
+          localStorage.setItem('applyai_user', JSON.stringify(userObj));
+          setUser(userObj);
+          
+          if (hist.current.includes('login') || hist.current.includes('splash')) {
+            const onboarded = localStorage.getItem('applyai_onboarded');
+            goTo(onboarded ? 'home' : 'onboarding');
+          }
+        } catch (err) {
+          console.error('Failed to sync user with backend:', err);
+        }
+      } else {
+        localStorage.removeItem('applyai_token');
+        localStorage.removeItem('applyai_user');
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Auth check on mount
   useEffect(() => {
@@ -55,6 +100,13 @@ export default function JobPilotApp() {
     setCur(screen);
   }
 
+  // Set default selected job when entering search or saved screen on desktop
+  useEffect(() => {
+    if (isDesktop && (cur === 'search' || cur === 'saved')) {
+      setSelectedJob(null);
+    }
+  }, [cur, isDesktop]);
+
   function back() {
     if (hist.current.length <= 1) return;
     hist.current.pop();
@@ -73,20 +125,19 @@ export default function JobPilotApp() {
   const showNav = !NO_NAV.includes(cur);
 
   const SCREENS = {
-    splash: <SplashScreen goTo={goTo} />,
-    login: <LoginScreen goTo={goTo} setUser={setUser} />,
-    onboarding: <OnboardingScreen goTo={goTo} showToast={showToast} />,
-    home: <HomeScreen goTo={goTo} user={user} showToast={showToast} setSelectedJob={setSelectedJob} />,
-    search: <ExploreScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} />,
-    saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} />,
-    detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} />,
-    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} />,
-    notifications: <NotificationsScreen back={back} />,
+    splash: <SplashScreen goTo={goTo} isDesktop={isDesktop} />,
+    login: <LoginScreen goTo={goTo} setUser={setUser} isDesktop={isDesktop} />,
+    onboarding: <OnboardingScreen goTo={goTo} showToast={showToast} isDesktop={isDesktop} />,
+    home: <HomeScreen goTo={goTo} user={user} showToast={showToast} setSelectedJob={setSelectedJob} isDesktop={isDesktop} />,
+    search: <ExploreScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} isDesktop={isDesktop} />,
+    saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} isDesktop={isDesktop} />,
+    detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} isDesktop={isDesktop} />,
+    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} isDesktop={isDesktop} />,
+    notifications: <NotificationsScreen back={back} isDesktop={isDesktop} />,
   };
 
-  return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
+  const styleTag = (
+    <style dangerouslySetInnerHTML={{ __html: `
         :root {
           --bg:#141F14;--bg2:#1C2B1C;--bg3:#243024;--bg4:#2C3A2C;
           --card:rgba(28,43,28,0.95);--card2:rgba(36,48,36,0.9);
@@ -363,7 +414,98 @@ export default function JobPilotApp() {
         input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--bg3);outline:none}
         input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--lime);cursor:pointer}
       `}} />
+  );
 
+  if (!mounted) {
+    return (
+      <div style={{ background: '#0D150D', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <i className="ti ti-loader" style={{ fontSize: 32, color: 'var(--lime)', animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  // If user is on an onboarding/auth screen, we center it.
+  const isAuthScreen = NO_NAV.includes(cur);
+
+  if (isDesktop) {
+    if (isAuthScreen) {
+      return (
+        <div className="desktop-auth-container">
+          {styleTag}
+          <div className="desktop-auth-card">
+            {SCREENS[cur]}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="desktop-layout">
+        {styleTag}
+        {/* Sidebar */}
+        <aside className="d-sidebar">
+          <div className="d-logo">Job<span>Pilot</span></div>
+          
+          <nav className="d-nav">
+            {[
+              { id: 'home', icon: 'ti-layout-dashboard', label: 'Dashboard' },
+              { id: 'search', icon: 'ti-briefcase', label: 'Explore Jobs' },
+              { id: 'saved', icon: 'ti-send', label: 'Applications' },
+              { id: 'notifications', icon: 'ti-bell', label: 'Notifications' },
+              { id: 'profile', icon: 'ti-user', label: 'Profile Settings' },
+            ].map(({ id, icon, label }) => (
+              <button
+                key={id}
+                className={`d-nav-btn ${cur === id ? 'active' : ''}`}
+                onClick={() => goTo(id)}
+              >
+                <i className={`ti ${icon}`} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="d-sidebar-footer">
+            <div className="d-user-info">
+              <div className="d-user-ava">
+                {(user?.name || 'AR').slice(0, 2).toUpperCase()}
+              </div>
+              <div className="d-user-meta">
+                <div className="d-user-name">{user?.name || 'Arun Reddy'}</div>
+                <div className="d-user-email">{user?.email || 'demo@applyai.dev'}</div>
+              </div>
+            </div>
+            <button className="d-logout-btn" onClick={() => {
+              localStorage.removeItem('applyai_token');
+              localStorage.removeItem('applyai_user');
+              localStorage.removeItem('applyai_onboarded');
+              setUser(null);
+              goTo('splash');
+            }}>
+              <i className="ti ti-logout" />
+              <span>Sign Out</span>
+            </button>
+          </div>
+        </aside>
+
+        {/* Main content area */}
+        <main className="d-main-content">
+          {SCREENS[cur]}
+        </main>
+
+        {/* Toast notifications */}
+        <div className={`toast-el ${toast.show ? 'show' : ''}`} style={{ bottom: '24px', right: '24px', left: 'auto', width: 'auto', maxWidth: '360px' }}>
+          <i className="ti ti-check" />
+          <span>{toast.msg}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {styleTag}
       <div className="phone">
         {/* Status bar */}
         <div className="status-bar">

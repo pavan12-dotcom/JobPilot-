@@ -4,7 +4,7 @@ import { jobsApi } from '@/lib/api';
 
 const TABS = ['About', 'Requirements', 'Company'];
 
-export default function DetailScreen({ back, showToast, selectedJob }) {
+export default function DetailScreen({ back, showToast, selectedJob, isDesktop }) {
   const [activeTab, setActiveTab] = useState('About');
   const [applying, setApplying] = useState(false);
   const [saved, setSaved] = useState(selectedJob?.is_saved || false);
@@ -50,7 +50,11 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
   return (
     <div className="det-screen" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="det-topbar">
-        <button className="bk-btn" onClick={back}><i className="ti ti-arrow-left" /></button>
+        {back ? (
+          <button className="bk-btn" onClick={back}><i className="ti ti-arrow-left" /></button>
+        ) : (
+          <div style={{ width: 36 }} />
+        )}
         <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)' }}>Job Detail</span>
         <button className="bk-btn" onClick={handleSave}>
           <i className={`ti ${saved ? 'ti-bookmark-filled' : 'ti-bookmark'}`} style={{ color: saved ? 'var(--lime)' : undefined }} />
