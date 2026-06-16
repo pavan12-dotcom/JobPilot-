@@ -1,22 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  images: {
-    domains: [
-      'api.dicebear.com',
-      'logo.clearbit.com',
-      'www.google.com',
-      'supabase.co',
-    ],
-  },
-  async rewrites() {
+  async redirects() {
     return [
-      {
-        source: '/api/backend/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/:path*`,
-      },
+      { source: '/login', destination: '/', permanent: false },
+      { source: '/register', destination: '/', permanent: false },
+      { source: '/onboarding', destination: '/', permanent: false },
+      { source: '/dashboard', destination: '/', permanent: false },
+      { source: '/dashboard/:path*', destination: '/', permanent: false },
     ];
   },
 };
 
 module.exports = nextConfig;
+

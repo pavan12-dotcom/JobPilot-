@@ -1,54 +1,1004 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-export default function SplashPage() {
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
+export default function HomePage() {
   useEffect(() => {
-    setMounted(true);
-    const token = localStorage.getItem('applyai_token');
-    if (token) {
-      router.push('/dashboard');
+    const noNav = ['splash', 'detail', 'notifications'];
+    const main = ['home', 'search', 'saved', 'profile'];
+    let hist = ['splash'];
+    let cur = 'splash';
+
+    window.go = function (n) {
+      if (n === cur) return;
+
+      const curScreen = document.getElementById('sc-' + cur);
+      const nextScreen = document.getElementById('sc-' + n);
+
+      if (curScreen) {
+        curScreen.classList.remove('active');
+        curScreen.classList.add('out');
+        const tempCur = cur;
+        setTimeout(() => {
+          const el = document.getElementById('sc-' + tempCur);
+          if (el) el.classList.remove('out');
+        }, 320);
+      }
+
+      if (nextScreen) {
+        nextScreen.classList.add('active');
+      }
+
+      hist.push(n);
+      cur = n;
+
+      // Show or hide bottom navigation
+      const bnav = document.getElementById('bnav');
+      if (bnav) {
+        if (noNav.includes(n)) {
+          bnav.style.display = 'none';
+        } else {
+          bnav.style.display = 'flex';
+        }
+      }
+
+      // Update active states on bottom nav buttons
+      if (main.includes(n)) {
+        const btns = document.querySelectorAll('.bnav .nbtn');
+        btns.forEach((btn) => btn.classList.remove('active'));
+        const activeBtn = document.getElementById('n-' + n);
+        if (activeBtn) activeBtn.classList.add('active');
+      }
+    };
+
+    window.back = function () {
+      if (hist.length <= 1) return;
+      hist.pop(); // Remove current screen
+      const prev = hist.pop(); // Get previous screen
+      window.go(prev);
+    };
+
+    // Category filter on Home screen
+    window.fcat = function (el) {
+      const cats = document.querySelectorAll('#cats .cat');
+      cats.forEach((c) => {
+        c.classList.remove('active');
+        c.classList.add('off');
+      });
+      el.classList.remove('off');
+      el.classList.add('active');
+      window.showToast('Category changed to: ' + el.innerText);
+    };
+
+    // Toggle saved state on jobs
+    window.tsave = function (el) {
+      const isSaved = el.classList.toggle('saved');
+      const icon = el.querySelector('i');
+      if (isSaved) {
+        icon.className = 'ti ti-bookmark';
+        window.showToast('Job saved successfully!');
+      } else {
+        icon.className = 'ti ti-bookmark';
+        window.showToast('Job removed from saved.');
+      }
+    };
+
+    // Apply Now toast action
+    window.applyNow = function () {
+      window.showToast('Application submitted successfully!');
+    };
+
+    // Switch tabs on Detail screen
+    window.stab = function (el, tabId) {
+      // Tabs active state
+      const tabs = el.parentNode.querySelectorAll('.dtab');
+      tabs.forEach((t) => t.classList.remove('active'));
+      el.classList.add('active');
+
+      // Tab content visibility
+      const contents = ['t-about', 't-req', 't-co'];
+      contents.forEach((id) => {
+        const section = document.getElementById(id);
+        if (section) {
+          section.style.display = id === tabId ? 'block' : 'none';
+        }
+      });
+    };
+
+    // Toggle filter chips in Search
+    window.tfc = function (el) {
+      // Toggle siblings
+      const parent = el.parentNode;
+      const chips = parent.querySelectorAll('.fchip');
+      chips.forEach((c) => c.classList.remove('active'));
+      el.classList.add('active');
+    };
+
+    // Filter saved jobs
+    window.fs = function (el) {
+      const chips = el.parentNode.querySelectorAll('.schip');
+      chips.forEach((c) => c.classList.remove('active'));
+      el.classList.add('active');
+
+      const status = el.innerText.toLowerCase();
+      const listItems = document.querySelectorAll('#sc-saved .si');
+
+      listItems.forEach((item) => {
+        if (status === 'all') {
+          item.style.display = 'flex';
+          return;
+        }
+        const badge = item.querySelector('.si-bdg');
+        if (badge) {
+          const bText = badge.innerText.toLowerCase();
+          if (bText === status) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        }
+      });
+    };
+
+    // Select popular search tag
+    window.ss = function (val) {
+      const input = document.getElementById('si');
+      if (input) {
+        input.value = val;
+        window.hsr(val);
+      }
+    };
+
+    // Search filter logic
+    window.hsr = function (val) {
+      const cards = document.querySelectorAll('#sc-search .jcard');
+      let count = 0;
+
+      cards.forEach((card) => {
+        const title = card.querySelector('.jc-title').innerText.toLowerCase();
+        const company = card.querySelector('.jc-meta').innerText.toLowerCase();
+        const query = val.toLowerCase();
+
+        if (title.includes(query) || company.includes(query)) {
+          card.style.display = 'block';
+          count++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      const rc = document.getElementById('rc');
+      if (rc) {
+        rc.innerHTML = `<strong>${count}</strong> jobs found`;
+      }
+    };
+
+    // Toast utility
+    let toastTimeout;
+    window.showToast = function (msg) {
+      const toastEl = document.getElementById('toast');
+      const msgEl = document.getElementById('tm');
+      if (toastEl && msgEl) {
+        msgEl.innerText = msg;
+        toastEl.classList.add('show');
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => {
+          toastEl.classList.remove('show');
+        }, 2500);
+      }
+    };
+
+    function updateClock() {
+      const clk = document.getElementById('clk');
+      if (clk) {
+        const now = new Date();
+        let hours = now.getHours();
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        clk.innerText = `${hours}:${minutes}`;
+      }
     }
+    const clockInterval = setInterval(updateClock, 30000);
+    updateClock();
+
+    return () => {
+      clearInterval(clockInterval);
+      delete window.go;
+      delete window.back;
+      delete window.fcat;
+      delete window.tsave;
+      delete window.applyNow;
+      delete window.stab;
+      delete window.tfc;
+      delete window.fs;
+      delete window.ss;
+      delete window.hsr;
+      delete window.showToast;
+    };
   }, []);
 
-  if (!mounted) return null;
-
   return (
-    <div className="splash flex flex-col justify-center items-center text-center p-8 min-h-full bg-[#141F14]">
-      {/* Animated Splash Ring */}
-      <div className="splash-ring w-[180px] h-[180px] rounded-full border border-[rgba(184,240,35,0.20)] flex items-center justify-center mb-8 bg-[rgba(184,240,35,0.12)] relative">
-        <div className="inner w-[120px] h-[120px] rounded-full bg-[rgba(184,240,35,0.22)] flex items-center justify-center shadow-lg">
-          <i className="ti ti-briefcase text-[52px] text-[#B8F023] animate-pulse"></i>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        :root {
+          --bg:       #141F14;
+          --bg2:      #1C2B1C;
+          --bg3:      #243024;
+          --bg4:      #2C3A2C;
+          --card:     rgba(28,43,28,0.95);
+          --card2:    rgba(36,48,36,0.9);
+          --lime:     #B8F023;
+          --lime2:    #CEFF4A;
+          --lime-dim: rgba(184,240,35,0.12);
+          --lime-mid: rgba(184,240,35,0.22);
+          --text1:    #F0F5E8;
+          --text2:    #8BA882;
+          --text3:    #556B52;
+          --border:   rgba(184,240,35,0.10);
+          --border2:  rgba(184,240,35,0.20);
+          --radius-sm:  8px;
+          --radius-md: 14px;
+          --radius-lg: 20px;
+          --radius-xl: 28px;
+          --radius-full: 999px;
+          --tr: 0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html, body { height: 100%; background: #0D150D; }
+        body { font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+
+        /* ── Phone shell ── */
+        .phone { width: 390px; height: 844px; background: var(--bg); border-radius: 46px; overflow: hidden;
+          box-shadow: 0 0 0 1px rgba(184,240,35,0.08), 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(184,240,35,0.04);
+          position: relative; display: flex; flex-direction: column; }
+
+        .status-bar { padding: 14px 24px 6px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: var(--bg); }
+        .status-bar .time { font-size: 15px; font-weight: 700; color: var(--text1); }
+        .status-icons { display: flex; gap: 6px; align-items: center; }
+        .status-icons i { font-size: 15px; color: var(--text2); }
+
+        /* ── Screens ── */
+        .screens { flex: 1; overflow: hidden; position: relative; }
+        .screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; overflow-x: hidden;
+          background: var(--bg); transform: translateX(100%); transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
+          display: flex; flex-direction: column; scrollbar-width: none; }
+        .screen::-webkit-scrollbar { display: none; }
+        .screen.active { transform: translateX(0); }
+        .screen.out { transform: translateX(-28%); }
+
+        /* ── Bottom nav ── */
+        .bnav { background: var(--bg2); border-top: 1px solid var(--border); padding: 10px 0 20px;
+          display: flex; justify-content: space-around; flex-shrink: 0; z-index: 10; }
+        .nbtn { display: flex; flex-direction: column; align-items: center; gap: 3px;
+          cursor: pointer; padding: 4px 14px; border: none; background: none; transition: transform var(--tr); }
+        .nbtn:active { transform: scale(0.9); }
+        .nbtn i { font-size: 22px; color: var(--text3); transition: color var(--tr); }
+        .nbtn.active i { color: var(--lime); }
+        .ndot { width: 4px; height: 4px; border-radius: 50%; background: var(--lime); opacity: 0; transition: opacity var(--tr); }
+        .nbtn.active .ndot { opacity: 1; }
+        .nlbl { font-size: 9px; font-weight: 500; color: var(--text3); transition: color var(--tr); }
+        .nbtn.active .nlbl { color: var(--lime); }
+
+        /* ── Topbar ── */
+        .topbar { padding: 10px 20px 8px; display: flex; align-items: center; justify-content: space-between;
+          background: var(--bg); position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--border); }
+        .logo { font-size: 20px; font-weight: 800; color: var(--text1); letter-spacing: -0.5px; }
+        .logo span { color: var(--lime); }
+        .ibtn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border2); background: var(--lime-dim);
+          display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background var(--tr); }
+        .ibtn:hover { background: var(--lime-mid); }
+        .ibtn i { font-size: 18px; color: var(--lime); }
+        .ava { width: 36px; height: 36px; border-radius: 50%; background: var(--lime); color: var(--bg);
+          font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; border: 2px solid rgba(184,240,35,0.3); }
+
+        /* ── SPLASH ── */
+        .splash { background: var(--bg); display: flex; flex-direction: column; justify-content: center;
+          align-items: center; padding: 40px 32px; text-align: center; min-height: 100%; }
+        .splash-ring { width: 180px; height: 180px; border-radius: 50%; border: 1px solid var(--border2);
+          display: flex; align-items: center; justify-content: center; margin-bottom: 32px;
+          background: var(--lime-dim); position: relative; }
+        .splash-ring::before { content: ''; position: absolute; width: 220px; height: 220px; border-radius: 50%;
+          border: 1px solid rgba(184,240,35,0.06); pointer-events: none; }
+        .splash-ring .inner { width: 120px; height: 120px; border-radius: 50%; background: var(--lime-mid);
+          display: flex; align-items: center; justify-content: center; }
+        .splash-ring i { font-size: 52px; color: var(--lime); }
+        .splash-title { font-size: 28px; font-weight: 800; color: var(--text1); line-height: 1.2; margin-bottom: 12px; }
+        .splash-title em { color: var(--lime); font-style: normal; }
+        .splash-sub { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 40px; }
+        .splash-btn { width: 100%; background: var(--lime); color: var(--bg); border: none; padding: 16px;
+          border-radius: var(--radius-full); font-size: 15px; font-weight: 800; cursor: pointer;
+          font-family: inherit; transition: background var(--tr), transform var(--tr); margin-bottom: 14px; }
+        .splash-btn:hover { background: var(--lime2); }
+        .splash-btn:active { transform: scale(0.98); }
+        .splash-skip { font-size: 12px; color: var(--text3); cursor: pointer; }
+        .splash-skip:hover { color: var(--text2); }
+
+        /* ── Cards ── */
+        .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px;
+          margin: 0 16px 12px; transition: border-color var(--tr), transform var(--tr); }
+        .card:hover { border-color: var(--border2); transform: translateY(-1px); }
+        .card.lime-accent { background: var(--lime); border-color: var(--lime); }
+
+        /* ── HOME ── */
+        .hero-sec { padding: 8px 20px 14px; }
+        .hero-greet { font-size: 12px; color: var(--text2); margin-bottom: 3px; }
+        .hero-h { font-size: 24px; font-weight: 800; color: var(--text1); line-height: 1.2; }
+        .hero-h em { color: var(--lime); font-style: normal; }
+        .hero-sub { font-size: 12px; color: var(--text2); margin-top: 5px; line-height: 1.5; }
+
+        .search-wrap { padding: 0 20px 14px; }
+        .search-bar { display: flex; align-items: center; gap: 10px; background: var(--bg2);
+          border: 1.5px solid var(--border); border-radius: var(--radius-full); padding: 11px 16px;
+          cursor: text; transition: border-color var(--tr); }
+        .search-bar:hover { border-color: var(--border2); }
+        .search-bar i { font-size: 17px; color: var(--lime); }
+        .search-bar span { font-size: 13px; color: var(--text3); flex: 1; }
+        .search-flt { width: 28px; height: 28px; background: var(--lime); border-radius: 8px;
+          display: flex; align-items: center; justify-content: center; }
+        .search-flt i { font-size: 14px; color: var(--bg); }
+
+        .stats-row { display: flex; gap: 10px; padding: 0 20px 16px; }
+        .stat-card { flex: 1; background: var(--bg2); border: 1px solid var(--border);
+          border-radius: var(--radius-md); padding: 12px; text-align: center; }
+        .stat-num { font-size: 18px; font-weight: 800; color: var(--lime); }
+        .stat-lbl { font-size: 9px; color: var(--text2); margin-top: 2px; }
+
+        .sec-hd { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 10px; }
+        .sec-title { font-size: 14px; font-weight: 700; color: var(--text1); }
+        .see-all { font-size: 11px; color: var(--lime); font-weight: 500; cursor: pointer; }
+
+        .cats { display: flex; gap: 8px; padding: 0 20px 14px; overflow-x: auto; scrollbar-width: none; }
+        .cats::-webkit-scrollbar { display: none; }
+        .cat { padding: 6px 14px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600;
+          white-space: nowrap; cursor: pointer; transition: all var(--tr); flex-shrink: 0; border: 1.5px solid transparent; }
+        .cat.active { background: var(--lime); color: var(--bg); border-color: var(--lime); }
+        .cat.off { background: var(--bg2); color: var(--text2); border-color: var(--border); }
+        .cat.off:hover { border-color: var(--border2); color: var(--text1); }
+
+        /* Featured card */
+        .feat-card { margin: 0 20px 14px; background: var(--bg2); border: 1px solid var(--border2);
+          border-radius: var(--radius-lg); padding: 18px; cursor: pointer;
+          transition: transform var(--tr), border-color var(--tr); overflow: hidden; position: relative; }
+        .feat-card::before { content: ''; position: absolute; width: 100px; height: 100px; border-radius: 50%;
+          background: var(--lime-dim); top: -30px; right: -20px; pointer-events: none; }
+        .feat-card:hover { transform: translateY(-2px); border-color: var(--lime); }
+        .fc-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+        .fc-logo { width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--lime-dim);
+          border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center;
+          font-size: 16px; font-weight: 800; color: var(--lime); }
+        .fc-badge { padding: 4px 10px; border-radius: var(--radius-full); background: var(--lime-dim);
+          color: var(--lime); font-size: 10px; font-weight: 600; border: 1px solid var(--border2); }
+        .fc-title { font-size: 18px; font-weight: 800; color: var(--text1); margin-bottom: 2px; }
+        .fc-co { font-size: 12px; color: var(--text2); }
+        .fc-tags { display: flex; gap: 6px; margin: 10px 0; flex-wrap: wrap; }
+        .fc-tag { padding: 4px 10px; border-radius: var(--radius-full); font-size: 10px; font-weight: 600;
+          background: rgba(255,255,255,0.05); color: var(--text2); border: 1px solid var(--border); }
+        .fc-bot { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+        .fc-salary { font-size: 16px; font-weight: 800; color: var(--lime); }
+        .fc-apply { background: var(--lime); color: var(--bg); border: none; padding: 8px 18px;
+          border-radius: var(--radius-full); font-size: 12px; font-weight: 700; cursor: pointer;
+          font-family: inherit; transition: background var(--tr), transform var(--tr); }
+        .fc-apply:hover { background: var(--lime2); }
+        .fc-apply:active { transform: scale(0.96); }
+
+        /* Job card */
+        .jcard { margin: 0 20px 10px; background: var(--bg2); border: 1px solid var(--border);
+          border-radius: var(--radius-lg); padding: 14px; cursor: pointer;
+          transition: border-color var(--tr), transform var(--tr); }
+        .jcard:hover { border-color: var(--border2); transform: translateY(-1px); }
+        .jc-row { display: flex; align-items: center; gap: 12px; }
+        .jc-logo { width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+        .jc-inf { flex: 1; min-width: 0; }
+        .jc-title { font-size: 14px; font-weight: 700; color: var(--text1); }
+        .jc-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
+        .jsave { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--lime-dim);
+          border: 1px solid var(--border2); cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: background var(--tr); }
+        .jsave:hover { background: var(--lime); }
+        .jsave:hover i { color: var(--bg); }
+        .jsave i { font-size: 15px; color: var(--lime); }
+        .jsave.saved { background: var(--lime); }
+        .jsave.saved i { color: var(--bg); }
+        .jc-bot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+        .tags-row { display: flex; gap: 5px; flex-wrap: wrap; }
+        .jtag { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; }
+        .t-remote { background: var(--lime-dim); color: var(--lime); border: 1px solid var(--border2); }
+        .t-full { background: rgba(34,197,94,0.1); color: #4ADE80; }
+        .t-hybrid { background: rgba(251,191,36,0.1); color: #FCD34D; }
+        .t-onsite { background: rgba(96,165,250,0.1); color: #93C5FD; }
+        .jc-salary { font-size: 12px; font-weight: 700; color: var(--lime); }
+
+        .sp { height: 16px; flex-shrink: 0; }
+
+        /* ── DETAIL ── */
+        .det-screen { background: var(--bg); }
+        .det-topbar { padding: 10px 20px 8px; display: flex; align-items: center; justify-content: space-between;
+          background: var(--bg); position: sticky; top: 0; z-index: 5; border-bottom: 1px solid var(--border); }
+        .bk-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--bg2); border: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color var(--tr); }
+        .bk-btn:hover { border-color: var(--border2); }
+        .bk-btn i { font-size: 18px; color: var(--text1); }
+
+        .det-hero { padding: 10px 20px 18px; text-align: center; }
+        .det-logo { width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 12px;
+          background: var(--lime-dim); border: 1px solid var(--border2);
+          display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: var(--lime); }
+        .det-title { font-size: 22px; font-weight: 800; color: var(--text1); margin-bottom: 4px; }
+        .det-co { font-size: 12px; color: var(--text2); }
+
+        .det-stats { display: flex; gap: 0; margin: 0 20px 16px; background: var(--bg2);
+          border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+        .dsi { flex: 1; padding: 12px 0; text-align: center; position: relative; }
+        .dsi:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 15%; height: 70%;
+          width: 1px; background: var(--border); }
+        .dsv { font-size: 13px; font-weight: 700; color: var(--lime); }
+        .dsl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+        .det-body { background: var(--bg); border-radius: 24px 24px 0 0; flex: 1; padding: 20px 20px 0; }
+        .dtabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+        .dtab { flex: 1; padding: 10px 0; text-align: center; font-size: 12px; font-weight: 600; color: var(--text3);
+          cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all var(--tr); }
+        .dtab.active { color: var(--lime); border-bottom-color: var(--lime); }
+        .about-txt { font-size: 12px; color: var(--text2); line-height: 1.7; margin-bottom: 14px; }
+        .ds-title { font-size: 13px; font-weight: 700; color: var(--text1); margin-bottom: 8px; }
+        .req-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+        .rtag { padding: 5px 12px; border-radius: var(--radius-full); background: var(--lime-dim);
+          color: var(--lime); font-size: 11px; font-weight: 600; border: 1px solid var(--border2); }
+        .ben-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .ben-ico { width: 32px; height: 32px; border-radius: var(--radius-sm); background: var(--lime-dim);
+          border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; }
+        .ben-ico i { font-size: 15px; color: var(--lime); }
+        .ben-txt { font-size: 12px; color: var(--text2); }
+
+        .apply-bar { padding: 14px 20px 18px; background: var(--bg); border-top: 1px solid var(--border);
+          display: flex; gap: 12px; align-items: center; }
+        .sal-disp .sal-amt { font-size: 18px; font-weight: 800; color: var(--lime); }
+        .sal-disp .sal-per { font-size: 10px; color: var(--text3); }
+        .apply-btn-full { flex: 1.5; background: var(--lime); color: var(--bg); border: none; padding: 13px 0;
+          border-radius: var(--radius-full); font-size: 14px; font-weight: 800; cursor: pointer;
+          font-family: inherit; transition: background var(--tr), transform var(--tr); }
+        .apply-btn-full:hover { background: var(--lime2); }
+        .apply-btn-full:active { transform: scale(0.97); }
+
+        /* ── SEARCH ── */
+        .srch-inp-wrap { padding: 10px 20px 14px; }
+        .srch-inp { display: flex; gap: 10px; align-items: center; background: var(--bg2);
+          border: 1.5px solid var(--lime); border-radius: var(--radius-full); padding: 11px 16px;
+          box-shadow: 0 0 0 4px rgba(184,240,35,0.06); }
+        .srch-inp i { font-size: 17px; color: var(--lime); }
+        .srch-inp input { flex: 1; border: none; background: none; outline: none; font-size: 13px;
+          color: var(--text1); font-family: inherit; }
+        .srch-inp input::placeholder { color: var(--text3); }
+
+        .f-sec { padding: 0 20px 12px; }
+        .f-lbl { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+          letter-spacing: 0.5px; margin-bottom: 8px; }
+        .f-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .fchip { padding: 6px 14px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600;
+          border: 1.5px solid var(--border); color: var(--text2); background: var(--bg2); cursor: pointer;
+          transition: all var(--tr); }
+        .fchip.active { background: var(--lime); color: var(--bg); border-color: var(--lime); }
+        .fchip:hover:not(.active) { border-color: var(--border2); color: var(--text1); }
+
+        .pop-srch { padding: 4px 20px 14px; }
+        .pop-title { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+          letter-spacing: 0.5px; margin-bottom: 10px; }
+        .pop-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ptag { display: flex; align-items: center; gap: 5px; padding: 7px 12px; border-radius: var(--radius-md);
+          background: var(--bg2); border: 1px solid var(--border); font-size: 11px; color: var(--text2);
+          cursor: pointer; transition: all var(--tr); }
+        .ptag:hover { background: var(--lime-dim); color: var(--lime); border-color: var(--border2); }
+        .ptag i { font-size: 12px; color: var(--text3); }
+        .res-count { padding: 0 20px 10px; font-size: 12px; color: var(--text2); }
+        .res-count strong { color: var(--lime); }
+
+        /* ── SAVED ── */
+        .saved-filters { padding: 4px 20px 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+        .saved-filters::-webkit-scrollbar { display: none; }
+        .schip { padding: 6px 14px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600;
+          white-space: nowrap; border: 1.5px solid var(--border); color: var(--text2);
+          background: var(--bg2); cursor: pointer; transition: all var(--tr); flex-shrink: 0; }
+        .schip.active { background: var(--lime); color: var(--bg); border-color: var(--lime); }
+
+        .si { margin: 0 20px 10px; background: var(--bg2); border: 1px solid var(--border);
+          border-radius: var(--radius-lg); padding: 14px; display: flex; align-items: center; gap: 12px;
+          cursor: pointer; transition: border-color var(--tr), transform var(--tr); }
+        .si:hover { border-color: var(--border2); transform: translateY(-1px); }
+        .si-logo { width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+        .si-inf { flex: 1; min-width: 0; }
+        .si-t { font-size: 13px; font-weight: 700; color: var(--text1); }
+        .si-s { font-size: 11px; color: var(--text2); margin-top: 2px; }
+        .si-sal { font-size: 10px; font-weight: 600; color: var(--lime); margin-top: 3px; }
+        .si-bdg { padding: 4px 10px; border-radius: var(--radius-full); font-size: 10px; font-weight: 700; flex-shrink: 0; }
+        .b-new { background: rgba(96,165,250,0.12); color: #93C5FD; }
+        .b-app { background: rgba(251,191,36,0.12); color: #FCD34D; }
+        .b-int { background: rgba(34,197,94,0.12); color: #4ADE80; }
+        .b-clo { background: rgba(248,113,113,0.12); color: #FCA5A5; }
+
+        /* ── PROFILE ── */
+        .prof-hero { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 10px 20px 22px; text-align: center; }
+        .prof-ava { width: 72px; height: 72px; border-radius: 50%; background: var(--lime); margin: 0 auto 10px;
+          display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800;
+          color: var(--bg); border: 3px solid rgba(184,240,35,0.25); }
+        .prof-name { font-size: 19px; font-weight: 800; color: var(--text1); }
+        .prof-role { font-size: 12px; color: var(--text2); margin-top: 3px; }
+        .prof-loc { font-size: 11px; color: var(--text3); margin-top: 3px; display: flex; align-items: center;
+          justify-content: center; gap: 4px; }
+        .prof-loc i { font-size: 12px; }
+        .prof-stats { display: flex; gap: 0; margin-top: 18px; background: var(--bg3);
+          border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .ps { flex: 1; padding: 12px 0; text-align: center; position: relative; }
+        .ps:not(:last-child)::after { content: ''; position: absolute; right: 0; top: 15%; height: 70%;
+          width: 1px; background: var(--border); }
+        .psv { font-size: 17px; font-weight: 800; color: var(--lime); }
+        .psl { font-size: 9px; color: var(--text3); margin-top: 2px; }
+
+        .prof-body { background: var(--bg); flex: 1; padding: 0; }
+        .menu-sec-lbl { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase;
+          letter-spacing: 0.5px; padding: 16px 20px 8px; }
+        .mi { display: flex; align-items: center; gap: 12px; padding: 13px 20px;
+          border-bottom: 1px solid var(--border); cursor: pointer; transition: background var(--tr); }
+        .mi:hover { background: var(--bg2); }
+        .mi-ico { width: 36px; height: 36px; border-radius: var(--radius-md); background: var(--lime-dim);
+          border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; }
+        .mi-ico i { font-size: 17px; color: var(--lime); }
+        .mi-txt { flex: 1; }
+        .mi-lbl { font-size: 13px; font-weight: 600; color: var(--text1); }
+        .mi-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+        .mi-arr { font-size: 15px; color: var(--text3); margin-left: auto; }
+        .mi-bdg { padding: 2px 8px; border-radius: var(--radius-full); background: var(--lime);
+          color: var(--bg); font-size: 10px; font-weight: 800; }
+        .mi-ico.red { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.15); }
+        .mi-ico.red i { color: #F87171; }
+
+        /* ── NOTIFICATIONS ── */
+        .notif { display: flex; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border);
+          cursor: pointer; transition: background var(--tr); }
+        .notif:hover { background: var(--bg2); }
+        .notif.unread { background: var(--lime-dim); }
+        .notif-ico { width: 40px; height: 40px; border-radius: var(--radius-md); flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; }
+        .notif-ico i { font-size: 18px; color: var(--lime); }
+        .notif-txt { flex: 1; }
+        .notif-t { font-size: 13px; font-weight: 600; color: var(--text1); margin-bottom: 2px; }
+        .notif-s { font-size: 11px; color: var(--text2); line-height: 1.4; }
+        .notif-time { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+        /* ── Toast ── */
+        .toast { position: absolute; bottom: 90px; left: 20px; right: 20px;
+          background: var(--bg2); border: 1px solid var(--border2); color: var(--text1);
+          border-radius: var(--radius-md); padding: 12px 16px; font-size: 13px; font-weight: 500;
+          display: flex; align-items: center; gap: 8px;
+          transform: translateY(20px); opacity: 0; transition: all 0.3s ease;
+          pointer-events: none; z-index: 100; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast i { font-size: 16px; color: var(--lime); }
+
+        .divl { height: 1px; background: var(--border); margin: 0 20px 14px; }
+      `}} />
+      <div className="phone" dangerouslySetInnerHTML={{ __html: `
+        <div class="status-bar" id="sb">
+          <span class="time" id="clk">9:41</span>
+          <div class="status-icons"><i class="ti ti-wifi"></i><i class="ti ti-signal-4g"></i><i class="ti ti-battery"></i></div>
         </div>
-      </div>
+        <div class="screens">
 
-      {/* Splash Titles */}
-      <h1 className="splash-title text-[28px] font-extrabold text-[#F0F5E8] leading-tight mb-3">
-        Find Your <em className="text-[#B8F023] not-italic font-extrabold">Dream Job</em> Faster
-      </h1>
-      
-      <p className="splash-sub text-xs text-[#8BA882] leading-relaxed mb-10 max-w-xs">
-        AI-powered matching, daily refreshed roles, and automated browser applications built for you.
-      </p>
+          <!-- SPLASH -->
+          <div class="screen active" id="sc-splash">
+            <div class="splash">
+              <div class="splash-ring"><div class="inner"><i class="ti ti-briefcase"></i></div></div>
+              <div class="splash-title">Find Your <em>Dream Job</em> Faster</div>
+              <div class="splash-sub">58,000+ live roles matched to your skills. Updated daily, built for you.</div>
+              <button class="splash-btn" onclick="go('home')">Get started →</button>
+              <div class="splash-skip" onclick="go('home')">Already have an account? Sign in</div>
+            </div>
+          </div>
 
-      {/* Action Buttons */}
-      <button 
-        onClick={() => router.push('/register')} 
-        className="splash-btn w-full bg-[#B8F023] hover:bg-[#CEFF4A] text-[#141F14] border-none py-4 rounded-full text-[15px] font-extrabold transition-all duration-200 cursor-pointer shadow-md transform hover:scale-[1.01]"
-      >
-        Get started →
-      </button>
+          <!-- HOME -->
+          <div class="screen" id="sc-home">
+            <div class="topbar">
+              <div class="logo">Job<span>Pilot</span></div>
+              <div style="display:flex;gap:10px">
+                <div class="ibtn" onclick="go('notifications')"><i class="ti ti-bell"></i></div>
+                <div class="ava" onclick="go('profile')">AR</div>
+              </div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+              <div class="hero-sec">
+                <div class="hero-greet">Good morning, Arun 👋</div>
+                <div class="hero-h">Find your <em>dream job</em><br>today</div>
+                <div class="hero-sub">Over 58,000 jobs waiting. Your next chapter starts here.</div>
+              </div>
+              <div class="search-wrap">
+                <div class="search-bar" onclick="go('search')">
+                  <i class="ti ti-search"></i>
+                  <span>Search jobs, companies…</span>
+                  <div class="search-flt"><i class="ti ti-adjustments-horizontal"></i></div>
+                </div>
+              </div>
+              <div class="stats-row">
+                <div class="stat-card"><div class="stat-num">58k+</div><div class="stat-lbl">Live jobs</div></div>
+                <div class="stat-card"><div class="stat-num">12k+</div><div class="stat-lbl">Companies</div></div>
+                <div class="stat-card"><div class="stat-num">93%</div><div class="stat-lbl">Match rate</div></div>
+              </div>
+              <div class="sec-hd"><span class="sec-title">Categories</span></div>
+              <div class="cats" id="cats">
+                <div class="cat active" onclick="fcat(this)">All</div>
+                <div class="cat off" onclick="fcat(this)">Design</div>
+                <div class="cat off" onclick="fcat(this)">Engineering</div>
+                <div class="cat off" onclick="fcat(this)">Data</div>
+                <div class="cat off" onclick="fcat(this)">Marketing</div>
+                <div class="cat off" onclick="fcat(this)">Product</div>
+              </div>
+              <div class="sec-hd"><span class="sec-title">Featured</span><span class="see-all" onclick="go('search')">See all</span></div>
+              <div class="feat-card" onclick="go('detail')">
+                <div class="fc-top">
+                  <div class="fc-logo">G</div>
+                  <div class="fc-badge">Featured</div>
+                </div>
+                <div class="fc-title">Product Designer</div>
+                <div class="fc-co">Google · Mountain View, CA</div>
+                <div class="fc-tags">
+                  <div class="fc-tag">Remote</div>
+                  <div class="fc-tag">Full-time</div>
+                  <div class="fc-tag">Senior</div>
+                </div>
+                <div class="fc-bot">
+                  <div class="fc-salary">$120k – $160k/yr</div>
+                  <button class="fc-apply" onclick="event.stopPropagation();applyNow()">Apply now</button>
+                </div>
+              </div>
+              <div class="sec-hd"><span class="sec-title">Latest jobs</span><span class="see-all" onclick="go('search')">See all</span></div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(251,191,36,0.1);color:#FCD34D">N</div>
+                  <div class="jc-inf"><div class="jc-title">Frontend Engineer</div><div class="jc-meta">Netflix · Los Angeles</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-remote">Remote</span><span class="jtag t-full">Full-time</span></div>
+                  <div class="jc-salary">$140k–$190k</div>
+                </div>
+              </div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(52,211,153,0.1);color:#34D399">Sp</div>
+                  <div class="jc-inf"><div class="jc-title">UX Researcher</div><div class="jc-meta">Spotify · Stockholm</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-remote">Remote OK</span><span class="jtag t-full">Full-time</span></div>
+                  <div class="jc-salary">$95k–$130k</div>
+                </div>
+              </div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(167,139,250,0.1);color:#A78BFA">M</div>
+                  <div class="jc-inf"><div class="jc-title">Data Scientist</div><div class="jc-meta">Meta · New York</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-hybrid">Hybrid</span><span class="jtag t-onsite">Contract</span></div>
+                  <div class="jc-salary">$160k–$200k</div>
+                </div>
+              </div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(96,165,250,0.1);color:#93C5FD">A</div>
+                  <div class="jc-inf"><div class="jc-title">ML Engineer</div><div class="jc-meta">Apple · Cupertino</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-full">Full-time</span><span class="jtag t-onsite">On-site</span></div>
+                  <div class="jc-salary">$180k–$240k</div>
+                </div>
+              </div>
+              <div class="sp"></div>
+            </div>
+          </div>
 
-      <div 
-        onClick={() => router.push('/login')} 
-        className="splash-skip text-xs text-[#556B52] hover:text-[#8BA882] transition-colors cursor-pointer font-medium mt-3"
-      >
-        Already have an account? Sign in
-      </div>
-    </div>
+          <!-- DETAIL -->
+          <div class="screen det-screen" id="sc-detail">
+            <div class="det-topbar">
+              <button class="bk-btn" onclick="back()"><i class="ti ti-arrow-left"></i></button>
+              <span style="font-size:14px;font-weight:700;color:var(--text1)">Job detail</span>
+              <button class="bk-btn"><i class="ti ti-share"></i></button>
+            </div>
+            <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+              <div class="det-hero">
+                <div class="det-logo">G</div>
+                <div class="det-title">Product Designer</div>
+                <div class="det-co">Google · Mountain View, CA · 2 days ago</div>
+              </div>
+              <div class="det-stats">
+                <div class="dsi"><div class="dsv">$140k</div><div class="dsl">Salary</div></div>
+                <div class="dsi"><div class="dsv">Remote</div><div class="dsl">Work type</div></div>
+                <div class="dsi"><div class="dsv">Senior</div><div class="dsl">Level</div></div>
+                <div class="dsi"><div class="dsv">Full</div><div class="dsl">Contract</div></div>
+              </div>
+              <div class="det-body">
+                <div class="dtabs">
+                  <div class="dtab active" onclick="stab(this,'t-about')">About</div>
+                  <div class="dtab" onclick="stab(this,'t-req')">Requirements</div>
+                  <div class="dtab" onclick="stab(this,'t-co')">Company</div>
+                </div>
+                <div id="t-about">
+                  <p class="about-txt">Join Google's Product Design team and help shape experiences for billions. You'll partner with engineering, research, and PMs to define, design, and ship high-quality interfaces across Google products.</p>
+                  <div class="ds-title">What you'll do</div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-pencil"></i></div><div class="ben-txt">Own end-to-end design for key product surfaces</div></div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-users"></i></div><div class="ben-txt">Lead design sprints and user research sessions</div></div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-chart-bar"></i></div><div class="ben-txt">Analyse data to inform design decisions</div></div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-tool"></i></div><div class="ben-txt">Evolve the design system at scale</div></div>
+                  <div class="ds-title" style="margin-top:14px">Benefits</div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-heart"></i></div><div class="ben-txt">Full health, dental & vision coverage</div></div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-plane"></i></div><div class="ben-txt">Unlimited PTO + 20 days paid vacation</div></div>
+                  <div class="ben-row"><div class="ben-ico"><i class="ti ti-school"></i></div><div class="ben-txt">$5,000/yr learning & development budget</div></div>
+                  <div class="sp"></div>
+                </div>
+                <div id="t-req" style="display:none">
+                  <div class="ds-title">Skills required</div>
+                  <div class="req-tags">
+                    <span class="rtag">Figma</span><span class="rtag">Prototyping</span>
+                    <span class="rtag">User research</span><span class="rtag">Design systems</span>
+                    <span class="rtag">Accessibility</span><span class="rtag">SQL basics</span>
+                  </div>
+                  <div class="ds-title" style="margin-top:4px">Experience</div>
+                  <p class="about-txt">5+ years of product design, preferably at a consumer tech company. Portfolio showing your process and shipped work is required.</p>
+                  <div class="ds-title">Nice to have</div>
+                  <div class="req-tags">
+                    <span class="rtag" style="background:rgba(34,197,94,0.1);color:#4ADE80;border-color:rgba(34,197,94,0.2)">Motion design</span>
+                    <span class="rtag" style="background:rgba(34,197,94,0.1);color:#4ADE80;border-color:rgba(34,197,94,0.2)">Swift/SwiftUI</span>
+                    <span class="rtag" style="background:rgba(34,197,94,0.1);color:#4ADE80;border-color:rgba(34,197,94,0.2)">iOS patterns</span>
+                  </div>
+                  <div class="sp"></div>
+                </div>
+                <div id="t-co" style="display:none">
+                  <div class="ds-title">About Google</div>
+                  <p class="about-txt">Google LLC is a multinational technology company specialising in internet services, search, cloud computing, and hardware with 180,000+ employees worldwide.</p>
+                  <div class="ds-title" style="margin-top:4px">Company stats</div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+                    <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border)"><div style="font-size:17px;font-weight:800;color:var(--lime)">180k+</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Employees</div></div>
+                    <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border)"><div style="font-size:17px;font-weight:800;color:var(--lime)">4.8★</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Glassdoor</div></div>
+                    <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border)"><div style="font-size:17px;font-weight:800;color:var(--lime)">1998</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Founded</div></div>
+                    <div style="background:var(--bg2);border-radius:var(--radius-md);padding:12px;border:1px solid var(--border)"><div style="font-size:17px;font-weight:800;color:var(--lime)">$280B</div><div style="font-size:10px;color:var(--text2);margin-top:2px">Revenue</div></div>
+                  </div>
+                  <div class="sp"></div>
+                </div>
+              </div>
+            </div>
+            <div class="apply-bar">
+              <div class="sal-disp"><div class="sal-amt">$140k</div><div class="sal-per">per year</div></div>
+              <button class="apply-btn-full" onclick="applyNow()">Apply now</button>
+            </div>
+          </div>
+
+          <!-- SEARCH -->
+          <div class="screen" id="sc-search">
+            <div class="topbar">
+              <div class="logo">Job<span>Pilot</span></div>
+              <div class="ava" onclick="go('profile')">AR</div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+              <div class="srch-inp-wrap">
+                <div class="srch-inp">
+                  <i class="ti ti-search"></i>
+                  <input type="text" placeholder="Job title, skill, company…" id="si" oninput="hsr(this.value)"/>
+                </div>
+              </div>
+              <div class="f-sec">
+                <div class="f-lbl">Location</div>
+                <div class="f-chips">
+                  <div class="fchip active" onclick="tfc(this)">Anywhere</div>
+                  <div class="fchip" onclick="tfc(this)">Remote</div>
+                  <div class="fchip" onclick="tfc(this)">Hybrid</div>
+                  <div class="fchip" onclick="tfc(this)">On-site</div>
+                </div>
+              </div>
+              <div class="f-sec">
+                <div class="f-lbl">Job type</div>
+                <div class="f-chips">
+                  <div class="fchip active" onclick="tfc(this)">All types</div>
+                  <div class="fchip" onclick="tfc(this)">Full-time</div>
+                  <div class="fchip" onclick="tfc(this)">Part-time</div>
+                  <div class="fchip" onclick="tfc(this)">Contract</div>
+                </div>
+              </div>
+              <div class="f-sec">
+                <div class="f-lbl">Experience</div>
+                <div class="f-chips">
+                  <div class="fchip active" onclick="tfc(this)">Any level</div>
+                  <div class="fchip" onclick="tfc(this)">Entry</div>
+                  <div class="fchip" onclick="tfc(this)">Mid</div>
+                  <div class="fchip" onclick="tfc(this)">Senior</div>
+                </div>
+              </div>
+              <div class="pop-srch">
+                <div class="pop-title">Popular searches</div>
+                <div class="pop-tags">
+                  <div class="ptag" onclick="ss('Product Designer')"><i class="ti ti-trending-up"></i>Product Designer</div>
+                  <div class="ptag" onclick="ss('React Developer')"><i class="ti ti-trending-up"></i>React Developer</div>
+                  <div class="ptag" onclick="ss('Data Analyst')"><i class="ti ti-trending-up"></i>Data Analyst</div>
+                  <div class="ptag" onclick="ss('iOS Engineer')"><i class="ti ti-trending-up"></i>iOS Engineer</div>
+                  <div class="ptag" onclick="ss('DevOps')"><i class="ti ti-trending-up"></i>DevOps</div>
+                  <div class="ptag" onclick="ss('UX Writer')"><i class="ti ti-trending-up"></i>UX Writer</div>
+                </div>
+              </div>
+              <div class="divl"></div>
+              <div class="res-count" id="rc"><strong>5,284</strong> jobs found</div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:var(--lime-dim);color:var(--lime)">G</div>
+                  <div class="jc-inf"><div class="jc-title">Product Designer</div><div class="jc-meta">Google · Remote</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-remote">Remote</span><span class="jtag t-full">Full-time</span></div>
+                  <div class="jc-salary">$120k–$160k</div>
+                </div>
+              </div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(251,191,36,0.1);color:#FCD34D">N</div>
+                  <div class="jc-inf"><div class="jc-title">Senior UI Designer</div><div class="jc-meta">Netflix · Los Angeles</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-hybrid">Hybrid</span><span class="jtag t-full">Full-time</span></div>
+                  <div class="jc-salary">$130k–$170k</div>
+                </div>
+              </div>
+              <div class="jcard" onclick="go('detail')">
+                <div class="jc-row">
+                  <div class="jc-logo" style="background:rgba(52,211,153,0.1);color:#34D399">Sh</div>
+                  <div class="jc-inf"><div class="jc-title">Design Lead</div><div class="jc-meta">Shopify · Remote</div></div>
+                  <button class="jsave" onclick="event.stopPropagation();tsave(this)"><i class="ti ti-bookmark"></i></button>
+                </div>
+                <div class="jc-bot">
+                  <div class="tags-row"><span class="jtag t-remote">Remote</span><span class="jtag t-full">Full-time</span></div>
+                  <div class="jc-salary">$150k–$190k</div>
+                </div>
+              </div>
+              <div class="sp"></div>
+            </div>
+          </div>
+
+          <!-- SAVED -->
+          <div class="screen" id="sc-saved">
+            <div class="topbar">
+              <div class="logo">Job<span>Pilot</span></div>
+              <div class="ibtn"><i class="ti ti-adjustments-horizontal"></i></div>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+              <div style="padding:0 20px 12px"><div style="font-size:17px;font-weight:800;color:var(--text1)">Saved Jobs <span style="font-size:13px;font-weight:500;color:var(--lime)">(7)</span></div></div>
+              <div class="saved-filters">
+                <div class="schip active" onclick="fs(this)">All</div>
+                <div class="schip" onclick="fs(this)">New</div>
+                <div class="schip" onclick="fs(this)">Applied</div>
+                <div class="schip" onclick="fs(this)">Interview</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:var(--lime-dim);color:var(--lime)">G</div>
+                <div class="si-inf"><div class="si-t">Product Designer</div><div class="si-s">Google · Mountain View</div><div class="si-sal">$120k–$160k/yr</div></div>
+                <div class="si-bdg b-new">New</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(52,211,153,0.1);color:#34D399">Sp</div>
+                <div class="si-inf"><div class="si-t">UX Researcher</div><div class="si-s">Spotify · Stockholm</div><div class="si-sal">$95k–$130k/yr</div></div>
+                <div class="si-bdg b-app">Applied</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(251,191,36,0.1);color:#FCD34D">N</div>
+                <div class="si-inf"><div class="si-t">Frontend Engineer</div><div class="si-s">Netflix · Los Angeles</div><div class="si-sal">$140k–$190k/yr</div></div>
+                <div class="si-bdg b-int">Interview</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(167,139,250,0.1);color:#A78BFA">M</div>
+                <div class="si-inf"><div class="si-t">Data Scientist</div><div class="si-s">Meta · New York</div><div class="si-sal">$160k–$200k/yr</div></div>
+                <div class="si-bdg b-new">New</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(96,165,250,0.1);color:#93C5FD">A</div>
+                <div class="si-inf"><div class="si-t">ML Engineer</div><div class="si-s">Apple · Cupertino</div><div class="si-sal">$180k–$240k/yr</div></div>
+                <div class="si-bdg b-app">Applied</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(52,211,153,0.1);color:#34D399">Sh</div>
+                <div class="si-inf"><div class="si-t">Design Lead</div><div class="si-s">Shopify · Remote</div><div class="si-sal">$150k–$190k/yr</div></div>
+                <div class="si-bdg b-int">Interview</div>
+              </div>
+              <div class="si" onclick="go('detail')">
+                <div class="si-logo" style="background:rgba(251,191,36,0.12);color:#FCD34D">Am</div>
+                <div class="si-inf"><div class="si-t">Product Manager</div><div class="si-s">Amazon · Seattle</div><div class="si-sal">$135k–$175k/yr</div></div>
+                <div class="si-bdg b-clo">Closed</div>
+              </div>
+              <div class="sp"></div>
+            </div>
+          </div>
+
+          <!-- PROFILE -->
+          <div class="screen" id="sc-profile">
+            <div style="flex:1;overflow-y:auto">
+              <div class="prof-hero">
+                <div style="display:flex;justify-content:flex-end;padding-bottom:10px">
+                  <div class="ibtn"><i class="ti ti-settings"></i></div>
+                </div>
+                <div class="prof-ava">AR</div>
+                <div class="prof-name">Arun Reddy</div>
+                <div class="prof-role">Senior Product Designer</div>
+                <div class="prof-loc"><i class="ti ti-map-pin"></i>Hyderabad, India</div>
+                <div class="prof-stats">
+                  <div class="ps"><div class="psv">12</div><div class="psl">Saved</div></div>
+                  <div class="ps"><div class="psv">5</div><div class="psl">Applied</div></div>
+                  <div class="ps"><div class="psv">2</div><div class="psl">Interviews</div></div>
+                  <div class="ps"><div class="psv">8yr</div><div class="psl">Experience</div></div>
+                </div>
+              </div>
+              <div class="prof-body">
+                <div style="margin:16px 20px 0;background:var(--lime-dim);border:1px solid var(--border2);border-radius:var(--radius-md);padding:12px;display:flex;align-items:center;gap:12px">
+                  <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--lime)">Complete your profile</div><div style="font-size:11px;color:var(--text2);margin-top:2px">75% done · Add portfolio to stand out</div></div>
+                  <div style="font-size:11px;font-weight:700;color:var(--lime);cursor:pointer">Edit →</div>
+                </div>
+                <div class="menu-sec-lbl">Account</div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-user"></i></div><div class="mi-txt"><div class="mi-lbl">My Profile</div><div class="mi-sub">Resume, skills, portfolio</div></div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-file-text"></i></div><div class="mi-txt"><div class="mi-lbl">My Applications</div><div class="mi-sub">Track all applications</div></div><div class="mi-bdg">5</div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-bell"></i></div><div class="mi-txt"><div class="mi-lbl">Job Alerts</div><div class="mi-sub">3 active alerts</div></div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div class="menu-sec-lbl">Preferences</div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-adjustments"></i></div><div class="mi-txt"><div class="mi-lbl">Job Preferences</div><div class="mi-sub">Role, salary, location</div></div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-lock"></i></div><div class="mi-txt"><div class="mi-lbl">Privacy</div><div class="mi-sub">Who can see your profile</div></div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div class="mi"><div class="mi-ico"><i class="ti ti-help"></i></div><div class="mi-txt"><div class="mi-lbl">Help & Support</div><div class="mi-sub">FAQs, contact us</div></div><div class="mi-arr"><i class="ti ti-chevron-right"></i></div></div>
+                <div style="height:12px"></div>
+                <div class="mi" style="border-bottom:none" onclick="go('splash')"><div class="mi-ico red"><i class="ti ti-logout"></i></div><div class="mi-txt"><div class="mi-lbl" style="color:#F87171">Sign out</div></div></div>
+                <div class="sp"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- NOTIFICATIONS -->
+          <div class="screen" id="sc-notifications">
+            <div class="topbar">
+              <button class="bk-btn" onclick="back()"><i class="ti ti-arrow-left"></i></button>
+              <span style="font-size:15px;font-weight:700;color:var(--text1)">Notifications</span>
+              <span style="font-size:11px;font-weight:600;color:var(--lime);cursor:pointer">Mark all read</span>
+            </div>
+            <div style="flex:1;overflow-y:auto">
+              <div class="notif unread">
+                <div class="notif-ico" style="background:var(--lime-dim);border:1px solid var(--border2)"><i class="ti ti-briefcase"></i></div>
+                <div class="notif-txt"><div class="notif-t">New match: Product Designer at Google</div><div class="notif-s">95% match with your profile. 234 applicants so far.</div><div class="notif-time">2 minutes ago</div></div>
+              </div>
+              <div class="notif unread">
+                <div class="notif-ico" style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.15)"><i class="ti ti-check" style="color:#4ADE80"></i></div>
+                <div class="notif-txt"><div class="notif-t">Application viewed by Netflix</div><div class="notif-s">Netflix reviewed your Frontend Engineer application.</div><div class="notif-time">1 hour ago</div></div>
+              </div>
+              <div class="notif unread">
+                <div class="notif-ico" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.15)"><i class="ti ti-calendar" style="color:#FCD34D"></i></div>
+                <div class="notif-txt"><div class="notif-t">Interview scheduled with Spotify</div><div class="notif-s">Video interview on June 20 at 10:00 AM IST.</div><div class="notif-time">3 hours ago</div></div>
+              </div>
+              <div class="notif">
+                <div class="notif-ico" style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.15)"><i class="ti ti-star" style="color:#93C5FD"></i></div>
+                <div class="notif-txt"><div class="notif-t">Your profile is trending</div><div class="notif-s">12 recruiters viewed your profile this week.</div><div class="notif-time">Yesterday</div></div>
+              </div>
+              <div class="notif">
+                <div class="notif-ico" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.15)"><i class="ti ti-mail" style="color:#A78BFA"></i></div>
+                <div class="notif-txt"><div class="notif-t">Message from Meta recruiter</div><div class="notif-s">"Hi Arun, we'd love to discuss the Data Scientist role…"</div><div class="notif-time">2 days ago</div></div>
+              </div>
+              <div class="sp"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom nav -->
+        <div class="bnav" id="bnav" style="display:none">
+          <button class="nbtn active" onclick="go('home')" id="n-home"><i class="ti ti-home"></i><div class="ndot"></div><span class="nlbl">Home</span></button>
+          <button class="nbtn" onclick="go('search')" id="n-search"><i class="ti ti-search"></i><div class="ndot"></div><span class="nlbl">Explore</span></button>
+          <button class="nbtn" onclick="go('saved')" id="n-saved"><i class="ti ti-bookmark"></i><div class="ndot"></div><span class="nlbl">Saved</span></button>
+          <button class="nbtn" onclick="go('profile')" id="n-profile"><i class="ti ti-user"></i><div class="ndot"></div><span class="nlbl">Profile</span></button>
+        </div>
+
+        <div class="toast" id="toast"><i class="ti ti-check"></i><span id="tm">Done!</span></div>
+      ` }} />
+    </>
   );
 }
