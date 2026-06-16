@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { authApi } from '@/lib/api';
+import { signInWithGoogle } from '@/lib/supabase';
 
 export default function LoginScreen({ goTo, setUser }) {
   const [email, setEmail] = useState('demo@applyai.dev');
@@ -112,8 +113,20 @@ export default function LoginScreen({ goTo, setUser }) {
       </div>
 
       <button
-        onClick={() => {}}
-        style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '12px 16px', color: 'var(--text1)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+        type="button"
+        disabled={loading}
+        onClick={async () => {
+          try {
+            setLoading(true);
+            setError('');
+            await signInWithGoogle();
+          } catch (err) {
+            setError(err.message || 'Google Sign-In failed.');
+          } finally {
+            setLoading(false);
+          }
+        }}
+        style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '12px 16px', color: 'var(--text1)', fontSize: 13, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: loading ? 0.7 : 1 }}
       >
         <svg width={16} height={16} viewBox="0 0 24 24">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
