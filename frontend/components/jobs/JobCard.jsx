@@ -24,10 +24,10 @@ export default function JobCard({ match, onSave, onApply, onClick }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       whileHover={{ 
-        scale: 1.02, 
-        translateY: -4,
-        borderColor: 'rgba(99, 102, 241, 0.6)',
-        boxShadow: '0 15px 30px rgba(99, 102, 241, 0.15)'
+        scale: 1.015, 
+        translateY: -3,
+        borderColor: 'rgba(239, 77, 94, 0.25)',
+        boxShadow: '0 15px 30px rgba(239, 77, 94, 0.05)'
       }}
       transition={{ type: 'spring', stiffness: 300, damping: 22 }}
       className="card-hover cursor-pointer group"

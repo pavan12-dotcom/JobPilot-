@@ -30,14 +30,15 @@ export default function RootLayout({ children }) {
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#1A1A24',
-              color: '#F8FAFC',
-              border: '1px solid #2A2A38',
-              borderRadius: '10px',
+              background: '#FFFFFF',
+              color: '#121214',
+              border: '1px solid rgba(0, 0, 0, 0.05)',
+              borderRadius: '12px',
               fontSize: '14px',
+              boxShadow: '0 10px 30px -10px rgba(0,0,0,0.06)',
             },
-            success: { iconTheme: { primary: '#22C55E', secondary: '#F8FAFC' } },
-            error: { iconTheme: { primary: '#EF4444', secondary: '#F8FAFC' } },
+            success: { iconTheme: { primary: '#10B981', secondary: '#FFFFFF' } },
+            error: { iconTheme: { primary: '#EF4D5E', secondary: '#FFFFFF' } },
           }}
         />
       </body>

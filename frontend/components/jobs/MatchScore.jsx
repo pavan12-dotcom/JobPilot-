@@ -14,21 +14,21 @@ export default function MatchScore({ score, size = 'md' }) {
       glow: 'shadow-[0_0_15px_rgba(34,197,94,0.2)]',
     },
     primary: {
-      text: 'text-primary-light',
+      text: 'text-primary',
       stroke: 'var(--primary)',
-      bg: 'rgba(99, 102, 241, 0.1)',
-      glow: 'shadow-[0_0_15px_rgba(99,102,241,0.2)]',
+      bg: 'rgba(239, 77, 94, 0.08)',
+      glow: 'shadow-[0_0_15px_rgba(239,77,94,0.1)]',
     },
     warning: {
       text: 'text-warning',
       stroke: 'var(--warning)',
-      bg: 'rgba(245, 158, 11, 0.1)',
+      bg: 'rgba(245, 158, 11, 0.08)',
       glow: '',
     },
     muted: {
       text: 'text-text-muted',
       stroke: 'var(--border)',
-      bg: 'rgba(42, 42, 56, 0.2)',
+      bg: 'rgba(0, 0, 0, 0.04)',
       glow: '',
     },
   };
@@ -67,7 +67,7 @@ export default function MatchScore({ score, size = 'md' }) {
           cx={center}
           cy={center}
           r={sizeCfg.r}
-          stroke="rgba(42, 42, 56, 0.5)"
+          stroke="rgba(0, 0, 0, 0.04)"
           strokeWidth={sizeCfg.strokeWidth}
           fill="transparent"
         />

@@ -38,16 +38,16 @@ export default function MatchChart({ data = DEMO_DATA }) {
         <ComposedChart data={data} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="appliedGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+              <stop offset="5%" stopColor="#EF4D5E" stopOpacity={0.25} />
+              <stop offset="95%" stopColor="#EF4D5E" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2A2A38" />
-          <XAxis dataKey="day" tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: '#64748B', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(0, 0, 0, 0.05)" />
+          <XAxis dataKey="day" tick={{ fill: '#8A8A9C', fontSize: 11 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: '#8A8A9C', fontSize: 11 }} axisLine={false} tickLine={false} />
           <Tooltip content={<CustomTooltip />} />
-          <Area type="monotone" dataKey="matched" fill="url(#appliedGrad)" stroke="#6366F1" strokeWidth={2} name="Jobs Matched" />
-          <Bar dataKey="applied" fill="#22C55E" opacity={0.8} radius={[4, 4, 0, 0]} name="Applied" />
+          <Area type="monotone" dataKey="matched" fill="url(#appliedGrad)" stroke="#EF4D5E" strokeWidth={2.5} name="Jobs Matched" />
+          <Bar dataKey="applied" fill="#10B981" opacity={0.8} radius={[4, 4, 0, 0]} name="Applied" />
           <Line type="monotone" dataKey="score" stroke="#F59E0B" strokeWidth={2} dot={false} name="Avg Score" />
         </ComposedChart>
       </ResponsiveContainer>
