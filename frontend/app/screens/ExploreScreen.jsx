@@ -15,7 +15,7 @@ function scoreColor(score) {
   return '#FCD34D';
 }
 
-export default function ExploreScreen({ goTo, showToast, setSelectedJob, selectedJob, isDesktop }) {
+export default function ExploreScreen({ goTo, showToast, setSelectedJob, selectedJob }) {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('Anywhere');
   const [jobType, setJobType] = useState('All types');
@@ -58,140 +58,7 @@ export default function ExploreScreen({ goTo, showToast, setSelectedJob, selecte
     return (m.job?.title || '').toLowerCase().includes(q) || (m.job?.company || '').toLowerCase().includes(q);
   });
 
-  if (isDesktop) {
-    return (
-      <div className="desktop-split-layout">
-        {/* Left Column - List */}
-        <div className="desktop-split-list">
-          {/* Search input */}
-          <div className="srch-inp-wrap">
-            <div className="srch-inp">
-              <i className="ti ti-search" />
-              <input
-                type="text"
-                placeholder="Job title, skill, company…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                style={{ flex: 1, border: 'none', background: 'none', outline: 'none', fontSize: 13, color: 'var(--text1)', fontFamily: 'inherit' }}
-              />
-              {query && <i className="ti ti-x" style={{ fontSize: 13, color: 'var(--text3)', cursor: 'pointer' }} onClick={() => setQuery('')} />}
-            </div>
-          </div>
 
-          {/* Filters */}
-          {[
-            { label: 'Location', items: LOCATIONS, value: location, set: setLocation },
-            { label: 'Job type', items: JOB_TYPES, value: jobType, set: setJobType },
-            { label: 'Experience', items: LEVELS, value: level, set: setLevel },
-          ].map(({ label, items, value, set }) => (
-            <div key={label} className="f-sec">
-              <div className="f-lbl">{label}</div>
-              <div className="f-chips">
-                {items.map((item) => (
-                  <div key={item} className={`fchip ${value === item ? 'active' : ''}`} onClick={() => set(item)}>{item}</div>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          {/* Popular searches */}
-          {!query && (
-            <div className="pop-srch">
-              <div className="pop-title">Popular searches</div>
-              <div className="pop-tags">
-                {POPULAR.map((p) => (
-                  <div key={p} className="ptag" onClick={() => setQuery(p)}>
-                    <i className="ti ti-trending-up" />
-                    {p}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="divl" />
-          <div className="res-count">
-            {loading ? 'Searching…' : <><strong>{filtered.length || count || '5,284'}</strong> jobs found</>}
-          </div>
-
-          {/* Job cards */}
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--text3)', fontSize: 13 }}>
-              <i className="ti ti-loader" style={{ fontSize: 24, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }} />
-              Fetching matched jobs…
-            </div>
-          ) : filtered.length > 0 ? (
-            filtered.map((match, i) => {
-              const job = match.job || match;
-              const score = match.match_score;
-              const saved = match.is_saved;
-              const initials = (job.company || 'J').slice(0, 2);
-              const isSelected = selectedJob && (selectedJob.job?.id === job.id || selectedJob.id === job.id);
-              return (
-                <div key={job.id || i} className={`jcard ${isSelected ? 'selected-card' : ''}`} onClick={() => setSelectedJob(match)}>
-                  <div className="jc-row">
-                    <div className="jc-logo" style={{ background: 'var(--lime-dim)', color: 'var(--lime)' }}>{initials}</div>
-                    <div className="jc-inf">
-                      <div className="jc-title">{job.title}</div>
-                      <div className="jc-meta">{job.company} · {job.location}</div>
-                    </div>
-                    {score && <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(score), background: `${scoreColor(score)}18`, border: `1px solid ${scoreColor(score)}30`, borderRadius: 'var(--radius-full)', padding: '3px 8px', flexShrink: 0 }}>{score}%</span>}
-                    <button className={`jsave ${saved ? 'saved' : ''}`} onClick={(e) => { e.stopPropagation(); handleSave(match); }}>
-                      <i className="ti ti-bookmark" />
-                    </button>
-                  </div>
-                  <div className="jc-bot">
-                    <div className="tags-row">
-                      <span className="jtag t-remote">{job.job_type?.replace('_', '-') || 'Remote'}</span>
-                      <span className="jtag t-full">Full-time</span>
-                      {match.match_reasons?.skills_matched?.[0] && <span className="jtag t-remote">{match.match_reasons.skills_matched[0]}</span>}
-                    </div>
-                    <div className="jc-salary">{job.salary_min ? `₹${(job.salary_min / 100000).toFixed(0)}L+` : 'Competitive'}</div>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            [
-              { logo: 'G', bg: 'var(--lime-dim)', color: 'var(--lime)', title: 'Product Designer', co: 'Google · Remote', score: 94, type: 'Remote', sal: '$120k–$160k' },
-              { logo: 'N', bg: 'rgba(251,191,36,0.1)', color: '#FCD34D', title: 'Senior UI Designer', co: 'Netflix · Los Angeles', score: 88, type: 'Hybrid', sal: '$130k–$170k' },
-              { logo: 'Sh', bg: 'rgba(52,211,153,0.1)', color: '#34D399', title: 'Design Lead', co: 'Shopify · Remote', score: 82, type: 'Remote', sal: '$150k–$190k' },
-            ].map((d, i) => {
-              const isSelected = selectedJob && (selectedJob.title === d.title && selectedJob.co === d.co);
-              return (
-                <div key={i} className={`jcard ${isSelected ? 'selected-card' : ''}`} onClick={() => setSelectedJob(d)}>
-                  <div className="jc-row">
-                    <div className="jc-logo" style={{ background: d.bg, color: d.color }}>{d.logo}</div>
-                    <div className="jc-inf"><div className="jc-title">{d.title}</div><div className="jc-meta">{d.co}</div></div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(d.score), background: `${scoreColor(d.score)}18`, border: `1px solid ${scoreColor(d.score)}30`, borderRadius: 'var(--radius-full)', padding: '3px 8px', flexShrink: 0 }}>{d.score}%</span>
-                    <button className="jsave" onClick={(e) => { e.stopPropagation(); showToast('Job saved!'); }}><i className="ti ti-bookmark" /></button>
-                  </div>
-                  <div className="jc-bot">
-                    <div className="tags-row"><span className="jtag t-remote">{d.type}</span><span className="jtag t-full">Full-time</span></div>
-                    <div className="jc-salary">{d.sal}</div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-          <div className="sp" />
-        </div>
-
-        {/* Right Column - Detail */}
-        <div className="desktop-split-detail">
-          {selectedJob ? (
-            <DetailScreen back={() => setSelectedJob(null)} showToast={showToast} selectedJob={selectedJob} isDesktop={isDesktop} />
-          ) : (
-            <div className="desktop-empty-detail">
-              <i className="ti ti-briefcase" />
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text1)' }}>No Job Selected</div>
-              <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 6 }}>Click a job card on the list to view its description, skills mapping, and requirements.</p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>

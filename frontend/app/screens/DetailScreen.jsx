@@ -4,7 +4,7 @@ import { jobsApi } from '@/lib/api';
 
 const TABS = ['About', 'Requirements', 'Company'];
 
-export default function DetailScreen({ back, showToast, selectedJob, isDesktop }) {
+export default function DetailScreen({ back, showToast, selectedJob }) {
   const [activeTab, setActiveTab] = useState('About');
   const [applying, setApplying] = useState(false);
   const [saved, setSaved] = useState(selectedJob?.is_saved || false);

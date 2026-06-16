@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi, resumeApi, preferencesApi } from '@/lib/api';
 
-export default function ProfileScreen({ goTo, user, showToast, setUser, isDesktop }) {
+export default function ProfileScreen({ goTo, user, showToast, setUser }) {
   const [stats, setStats] = useState(null);
   const [resume, setResume] = useState(null);
   const [prefs, setPrefs] = useState(null);
@@ -51,102 +51,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, isDeskto
     { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@applyai.dev') },
   ];
 
-  if (isDesktop) {
-    return (
-      <div style={{ display: 'flex', gap: 24, padding: 24, height: '100%', overflowY: 'auto' }}>
-        {/* Left Column: Profile Card & Status */}
-        <div style={{ width: 340, display: 'flex', flexDirection: 'column', gap: 20, flexShrink: 0 }}>
-          {/* Profile Card */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 24, textAlign: 'center' }}>
-            <div className="prof-ava" style={{ width: 80, height: 80, fontSize: 28, margin: '0 auto 16px' }}>{initials}</div>
-            <div className="prof-name" style={{ fontSize: 22 }}>{name}</div>
-            <div className="prof-role" style={{ fontSize: 13, color: 'var(--text2)', marginTop: 4 }}>{role}</div>
-            <div className="prof-loc" style={{ fontSize: 12, color: 'var(--text3)', marginTop: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-              <i className="ti ti-map-pin" />{loc}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{email}</div>
 
-            {/* Profile Stats List */}
-            <div className="prof-stats" style={{ marginTop: 24 }}>
-              {[
-                { v: s.total_applied || 12, l: 'Applied' },
-                { v: s.interviews || 5, l: 'Interviews' },
-                { v: s.total_matched || 87, l: 'Matched' },
-                { v: typeof experience === 'number' ? `${experience}yr` : experience, l: 'Experience' },
-              ].map(({ v, l }) => (
-                <div key={l} className="ps"><div className="psv" style={{ fontSize: 18 }}>{v}</div><div className="psl" style={{ fontSize: 10 }}>{l}</div></div>
-              ))}
-            </div>
-          </div>
-
-          {/* Progress Slider Card */}
-          <div style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', padding: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lime)' }}>Complete Profile</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>{profilePct}% completed</div>
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)', cursor: 'pointer' }} onClick={() => goTo('onboarding')}>Edit →</div>
-            </div>
-            <div style={{ height: 5, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${profilePct}%`, background: 'var(--lime)', borderRadius: 2 }} />
-            </div>
-          </div>
-
-          {/* Auto Apply Status Card */}
-          {prefs && (
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <i className="ti ti-zap" style={{ fontSize: 20, color: prefs.auto_apply_enabled ? 'var(--lime)' : 'var(--text3)' }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Auto-Apply Status</div>
-                  <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Min score: {prefs.min_match_score}% · Daily limit: {prefs.daily_limit}</div>
-                </div>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 700, color: prefs.auto_apply_enabled ? '#4ADE80' : 'var(--text3)', background: prefs.auto_apply_enabled ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', border: `1px solid ${prefs.auto_apply_enabled ? 'rgba(74,222,128,0.2)' : 'var(--border)'}`, padding: '4px 12px', borderRadius: 'var(--radius-full)' }}>
-                {prefs.auto_apply_enabled ? 'Active' : 'Disabled'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Menu Grids */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {/* Account Settings Menu */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
-            <div className="menu-sec-lbl" style={{ padding: '12px 16px 8px', fontSize: 11 }}>Account & Tracking</div>
-            {menuItems.map(({ icon, label, sub, badge, action }) => (
-              <div key={label} className="mi" style={{ borderBottom: '1px solid var(--border)' }} onClick={action}>
-                <div className="mi-ico"><i className={`ti ${icon}`} /></div>
-                <div className="mi-txt"><div className="mi-lbl">{label}</div><div className="mi-sub">{sub}</div></div>
-                {badge && <div className="mi-bdg">{badge}</div>}
-                <div className="mi-arr"><i className="ti ti-chevron-right" /></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Preferences Menu */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: 12 }}>
-            <div className="menu-sec-lbl" style={{ padding: '12px 16px 8px', fontSize: 11 }}>System Settings</div>
-            {prefItems.map(({ icon, label, sub, action }) => (
-              <div key={label} className="mi" style={{ borderBottom: '1px solid var(--border)' }} onClick={action}>
-                <div className="mi-ico"><i className={`ti ${icon}`} /></div>
-                <div className="mi-txt"><div className="mi-lbl">{label}</div><div className="mi-sub">{sub}</div></div>
-                <div className="mi-arr"><i className="ti ti-chevron-right" /></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Sign Out Card */}
-          <button className="mi" style={{ border: '1px solid rgba(248,113,113,0.15)', background: 'rgba(248,113,113,0.05)', borderRadius: 'var(--radius-md)', padding: '14px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, width: '100%', outline: 'none' }} onClick={handleSignOut}>
-            <div className="mi-ico red"><i className="ti ti-logout" /></div>
-            <div className="mi-txt" style={{ textAlign: 'left' }}><div className="mi-lbl" style={{ color: '#F87171', fontWeight: 700 }}>Sign Out of Account</div></div>
-            <div className="mi-arr" style={{ color: '#F87171' }}><i className="ti ti-chevron-right" /></div>
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
