@@ -82,6 +82,7 @@ model Resume {
   user_id     String
   file_url    String
   file_name   String
+  label       String?
   raw_text    String?  @db.Text
   parsed_data Json?
   is_active   Boolean  @default(true)

@@ -58,7 +58,7 @@ async function extractPdfText(buffer) {
 /**
  * Upload, extract, parse, and save a resume
  */
-async function uploadAndParseResume(file, userId) {
+async function uploadAndParseResume(file, userId, label = null) {
   // 1. Extract text from PDF
   logger.info(`📄 Extracting text from ${file.originalname}...`);
   const rawText = await extractPdfText(file.buffer);
@@ -99,6 +99,7 @@ async function uploadAndParseResume(file, userId) {
       user_id: userId,
       file_url: fileUrl,
       file_name: file.originalname,
+      label: label || file.originalname.replace(/\.pdf$/i, ''),
       raw_text: rawText,
       parsed_data: parsedData,
       is_active: true,
@@ -139,4 +140,26 @@ async function getActiveResume(userId) {
   });
 }
 
-module.exports = { uploadAndParseResume, reparseResume, getActiveResume };
+/**
+ * Set a specific resume as active and deactivate all others
+ */
+async function setActiveResume(resumeId, userId) {
+  const resume = await prisma.resume.findFirst({
+    where: { id: resumeId, user_id: userId },
+  });
+  if (!resume) throw ApiError.notFound('Resume not found');
+
+  await prisma.resume.updateMany({
+    where: { user_id: userId },
+    data: { is_active: false },
+  });
+
+  const updated = await prisma.resume.update({
+    where: { id: resumeId },
+    data: { is_active: true },
+  });
+
+  return updated;
+}
+
+module.exports = { uploadAndParseResume, reparseResume, getActiveResume, setActiveResume };

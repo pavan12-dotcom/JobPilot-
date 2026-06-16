@@ -8,26 +8,25 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: '#0A0A0F',
-        surface: '#111118',
-        card: '#1A1A24',
-        border: '#2A2A38',
+        background: 'var(--bg)',
+        surface: 'var(--surface)',
+        card: 'var(--card)',
+        border: 'var(--border)',
         primary: {
-          DEFAULT: '#6366F1',
-          hover: '#4F46E5',
-          light: '#818CF8',
+          DEFAULT: 'var(--primary)',
+          hover: 'var(--primary-hover)',
+          light: 'var(--primary-light)',
         },
-        success: '#22C55E',
-        warning: '#F59E0B',
-        error: '#EF4444',
-        // text colors — accessible via text-text, text-muted, text-subtle
+        success: 'var(--success)',
+        warning: 'var(--warning)',
+        error: 'var(--error)',
         text: {
-          DEFAULT: '#F8FAFC',
-          muted: '#94A3B8',
-          subtle: '#64748B',
+          DEFAULT: 'var(--text)',
+          muted: 'var(--muted)',
+          subtle: 'var(--subtle)',
         },
-        muted: '#94A3B8',
-        subtle: '#64748B',
+        muted: 'var(--muted)',
+        subtle: 'var(--subtle)',
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],

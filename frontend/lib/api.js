@@ -46,9 +46,10 @@ export const authApi = {
 };
 
 export const resumeApi = {
-  upload: (file) => {
+  upload: (file, label) => {
     const formData = new FormData();
     formData.append('resume', file);
+    if (label) formData.append('label', label);
     return api.post('/resume/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -57,6 +58,8 @@ export const resumeApi = {
   getAll: () => api.get('/resume/all'),
   delete: (id) => api.delete(`/resume/${id}`),
   reparse: (id) => api.post(`/resume/${id}/reparse`),
+  setActive: (id) => api.post(`/resume/${id}/active`),
+  update: (id, data) => api.patch(`/resume/${id}`, data),
 };
 
 export const preferencesApi = {
@@ -71,6 +74,7 @@ export const jobsApi = {
   save: (id) => api.post(`/jobs/${id}/save`),
   apply: (id) => api.post(`/jobs/${id}/apply`),
   refresh: () => api.post('/jobs/refresh'),
+  abTest: (id) => api.post(`/jobs/${id}/ab-test`),
 };
 
 export const applicationsApi = {

@@ -59,6 +59,38 @@ async function main() {
   });
   console.log(`✅ Resume: ${resume.file_name}`);
 
+  const resume2 = await prisma.resume.upsert({
+    where: { id: 'demo-resume-002' },
+    update: {},
+    create: {
+      id: 'demo-resume-002',
+      user_id: user.id,
+      file_url: 'https://example.com/resumes/alex-kumar-ds.pdf',
+      file_name: 'Alex_Kumar_Data_Science_Resume.pdf',
+      label: 'Data Science Resume',
+      raw_text: 'Alex Kumar | alex@email.com | +91 9876543210\n\nExperience:\nData Scientist at Analytics Corp (2022-2024)\nBuilt ML pipelines and deployed NLP models using Python and PyTorch\nDesigned A/B tests and statistical validation algorithms\n\nJunior Analyst at DataXYZ (2021-2022)\nWorked on data cleaning, ETL pipelines, and SQL queries\n\nEducation:\nB.Tech ECE - IIT Bangalore (2021)\nCGPA: 8.7/10\n\nSkills: Python, PyTorch, SQL, Pandas, NumPy, Scikit-learn, Tableau, AWS SageMaker, Docker, Git, Machine Learning, Deep Learning',
+      parsed_data: {
+        name: 'Alex Kumar',
+        email: 'alex@email.com',
+        phone: '+91 9876543210',
+        skills: ['Python', 'PyTorch', 'SQL', 'Pandas', 'NumPy', 'Scikit-learn', 'Tableau', 'AWS SageMaker', 'Docker', 'Git', 'Machine Learning', 'Deep Learning', 'NLP', 'A/B Testing'],
+        experience: [
+          { company: 'Analytics Corp', role: 'Data Scientist', years: 2, description: 'Built ML pipelines and deployed NLP models using Python and PyTorch. Designed A/B tests.' },
+          { company: 'DataXYZ', role: 'Junior Analyst', years: 1, description: 'Worked on data cleaning, ETL pipelines, and SQL queries.' },
+        ],
+        education: [
+          { degree: 'B.Tech Electronics & Communication Engineering', college: 'IIT Bangalore', year: 2021 },
+        ],
+        total_experience_years: 3,
+        current_role: 'Data Scientist',
+        preferred_roles: ['Data Scientist', 'Machine Learning Engineer', 'Data Analyst', 'AI Engineer'],
+        summary: 'Experienced data scientist with 3 years building predictive models and end-to-end ML pipelines. Skilled in python, deep learning, and advanced analytics.',
+      },
+      is_active: false,
+    },
+  });
+  console.log(`✅ Resume 2: ${resume2.file_name}`);
+
   // ── 3. Preferences ──────────────────────────────────────────
   await prisma.preference.upsert({
     where: { user_id: user.id },

@@ -160,4 +160,80 @@ router.post(
   }),
 );
 
+// POST /api/jobs/:id/ab-test — Compare match scores of all user's resumes against this job
+router.post(
+  '/:id/ab-test',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const job = await prisma.job.findUnique({ where: { id: req.params.id } });
+    if (!job) throw ApiError.notFound('Job not found');
+
+    const resumes = await prisma.resume.findMany({
+      where: { user_id: req.user.id },
+      orderBy: { created_at: 'desc' },
+    });
+
+    if (resumes.length === 0) {
+      throw ApiError.badRequest('No resumes found. Please upload at least one resume.');
+    }
+
+    const { scoreJobMatch } = require('../../ai/jobMatcher');
+    const results = [];
+
+    for (const resume of resumes) {
+      // Find existing match
+      let match = await prisma.jobMatch.findUnique({
+        where: {
+          user_id_job_id_resume_id: {
+            user_id: req.user.id,
+            job_id: job.id,
+            resume_id: resume.id,
+          },
+        },
+      });
+
+      if (!match) {
+        try {
+          const matchResult = await scoreJobMatch(resume.parsed_data, job);
+          match = await prisma.jobMatch.create({
+            data: {
+              user_id: req.user.id,
+              job_id: job.id,
+              resume_id: resume.id,
+              match_score: matchResult.match_score,
+              match_reasons: matchResult,
+            },
+          });
+        } catch (err) {
+          logger.error(`A/B testing match scoring failed for resume ${resume.id}:`, err.message);
+          results.push({
+            resumeId: resume.id,
+            resumeLabel: resume.label || resume.file_name,
+            success: false,
+            error: err.message,
+          });
+          continue;
+        }
+      }
+
+      results.push({
+        resumeId: resume.id,
+        resumeLabel: resume.label || resume.file_name,
+        isActive: resume.is_active,
+        success: true,
+        matchScore: match.match_score,
+        matchReasons: match.match_reasons,
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        job,
+        results,
+      },
+    });
+  }),
+);
+
 module.exports = router;

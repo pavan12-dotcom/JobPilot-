@@ -30,7 +30,7 @@ router.post(
   asyncHandler(async (req, res) => {
     if (!req.file) throw ApiError.badRequest('No file uploaded');
 
-    const { resume, parsedData } = await resumeService.uploadAndParseResume(req.file, req.user.id);
+    const { resume, parsedData } = await resumeService.uploadAndParseResume(req.file, req.user.id, req.body.label);
 
     // Send welcome email (non-blocking)
     sendResumeParsed(req.user.email, req.user.name, parsedData.skills || []).catch(() => {});
@@ -89,6 +89,46 @@ router.post(
   asyncHandler(async (req, res) => {
     const resume = await resumeService.reparseResume(req.params.id, req.user.id);
     res.json({ success: true, message: 'Resume reparsed', data: resume });
+  }),
+);
+
+// POST /api/resume/:id/active — Set resume as active
+router.post(
+  '/:id/active',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const resume = await resumeService.setActiveResume(req.params.id, req.user.id);
+    res.json({
+      success: true,
+      message: 'Active resume updated successfully',
+      data: resume,
+    });
+  }),
+);
+
+// PATCH /api/resume/:id — Update resume details (e.g. label)
+router.patch(
+  '/:id',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const { label } = req.body;
+    if (!label) throw ApiError.badRequest('Label is required');
+
+    const resume = await prisma.resume.findFirst({
+      where: { id: req.params.id, user_id: req.user.id },
+    });
+    if (!resume) throw ApiError.notFound('Resume not found');
+
+    const updated = await prisma.resume.update({
+      where: { id: req.params.id },
+      data: { label },
+    });
+
+    res.json({
+      success: true,
+      message: 'Resume updated successfully',
+      data: updated,
+    });
   }),
 );
 

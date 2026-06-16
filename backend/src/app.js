@@ -25,8 +25,31 @@ const app = express();
 
 // ── Security & Middleware ────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
+const ALLOWED_ORIGINS = [
+  env.FRONTEND_URL,
+  'http://localhost:3001',
+  'https://aipilot-dusky.vercel.app',
+  'https://aipilot-business-analytics-ai.vercel.app',
+  'https://aipilot-pt6182086-8814-business-analytics-ai.vercel.app'
+];
+
 app.use(cors({
-  origin: [env.FRONTEND_URL, 'http://localhost:3001'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    
+    const isAllowed = ALLOWED_ORIGINS.some((allowed) => {
+      if (!allowed) return false;
+      return origin.toLowerCase().startsWith(allowed.toLowerCase()) || 
+             allowed.toLowerCase().startsWith(origin.toLowerCase());
+    }) || origin.toLowerCase().includes('vercel.app') || 
+          origin.toLowerCase().includes('localhost');
+          
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -102,34 +125,36 @@ app.use(errorHandler);
 
 // ── Start Server ─────────────────────────────────────────────
 async function startServer() {
-  // Initialize workers (non-blocking)
-  try {
-    const { getJobFetchQueue } = require('./queues/jobFetch.queue');
-    const { getJobMatchQueue } = require('./queues/jobMatch.queue');
-    const { getAutoApplyQueue } = require('./queues/autoApply.queue');
-    const { registerJobFetchWorker } = require('./workers/jobFetch.worker');
-    const { registerJobMatchWorker } = require('./workers/jobMatch.worker');
-    const { registerAutoApplyWorker } = require('./workers/autoApply.worker');
-
-    registerJobFetchWorker(getJobFetchQueue());
-    registerJobMatchWorker(getJobMatchQueue());
-    registerAutoApplyWorker(getAutoApplyQueue());
-
-    // Schedule periodic job fetching
-    const { schedulePeriodicFetch } = require('./queues/jobFetch.queue');
-    await schedulePeriodicFetch();
-
-    logger.info('✅ All workers registered');
-  } catch (err) {
-    logger.error('Workers not started (Redis may not be available):', err);
-  }
-
   app.listen(env.PORT, () => {
     logger.info(`🚀 ApplyAI Backend running on port ${env.PORT}`);
     logger.info(`   Environment: ${env.NODE_ENV}`);
     logger.info(`   Health: http://localhost:${env.PORT}/health`);
     logger.info(`   Queue UI: http://localhost:${env.PORT}/admin/queues`);
   });
+
+  // Initialize workers (non-blocking to server startup)
+  (async () => {
+    try {
+      const { getJobFetchQueue } = require('./queues/jobFetch.queue');
+      const { getJobMatchQueue } = require('./queues/jobMatch.queue');
+      const { getAutoApplyQueue } = require('./queues/autoApply.queue');
+      const { registerJobFetchWorker } = require('./workers/jobFetch.worker');
+      const { registerJobMatchWorker } = require('./workers/jobMatch.worker');
+      const { registerAutoApplyWorker } = require('./workers/autoApply.worker');
+
+      registerJobFetchWorker(getJobFetchQueue());
+      registerJobMatchWorker(getJobMatchQueue());
+      registerAutoApplyWorker(getAutoApplyQueue());
+
+      // Schedule periodic job fetching
+      const { schedulePeriodicFetch } = require('./queues/jobFetch.queue');
+      await schedulePeriodicFetch();
+
+      logger.info('✅ All workers registered');
+    } catch (err) {
+      logger.error('Workers not started (Redis may not be available):', err.message);
+    }
+  })();
 }
 
 startServer();

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Zap, LayoutDashboard, Briefcase, FileText,
-  ClipboardList, Calendar, Settings, LogOut, Bot,
+  ClipboardList, Calendar, Settings, LogOut, Bot, GitCompare
 } from 'lucide-react';
 import { signOut } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/jobs', label: 'Jobs', icon: Briefcase },
   { href: '/dashboard/resume', label: 'Resume', icon: FileText },
+  { href: '/dashboard/ab-testing', label: 'A/B Testing', icon: GitCompare },
   { href: '/dashboard/applications', label: 'Applications', icon: ClipboardList },
   { href: '/dashboard/schedules', label: 'Schedules', icon: Calendar },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
