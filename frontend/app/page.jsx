@@ -19,18 +19,24 @@ const MAIN_TABS = ['home', 'search', 'saved', 'profile'];
 export default function JobPilotApp() {
   const [cur, setCur] = useState('splash');
   const [prev, setPrev] = useState(null);
-  const [animDir, setAnimDir] = useState('forward'); // forward | back
+  const [animDir, setAnimDir] = useState('forward');
   const [user, setUser] = useState(null);
   const [time, setTime] = useState('9:41');
   const [toast, setToast] = useState({ show: false, msg: '' });
   const [selectedJob, setSelectedJob] = useState(null);
   const [mounted, setMounted] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
   const toastTimeout = useRef(null);
   const hist = useRef(['splash']);
+  const goToRef = useRef(null);
 
-  // Mount check
+  // Mount check + detect OAuth callback in URL hash
   useEffect(() => {
     setMounted(true);
+    // If URL has OAuth token hash, show loader immediately
+    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+      setAuthLoading(true);
+    }
   }, []);
 
   // Sync Supabase Auth session
@@ -43,6 +49,8 @@ export default function JobPilotApp() {
         const token = session.access_token;
         localStorage.setItem('applyai_token', token);
         await syncUserFromSession(session);
+      } else {
+        setAuthLoading(false);
       }
     });
 
@@ -70,7 +78,6 @@ export default function JobPilotApp() {
       userObj = userRes.data;
     } catch (err) {
       console.warn('Backend sync failed, using Supabase user data:', err?.message);
-      // Fallback: build user object from Supabase session
       const su = session.user;
       userObj = {
         id: su.id,
@@ -79,16 +86,16 @@ export default function JobPilotApp() {
         avatar_url: su.user_metadata?.avatar_url || null,
       };
     }
-    if (!userObj) return;
+    if (!userObj) { setAuthLoading(false); return; }
     localStorage.setItem('applyai_user', JSON.stringify(userObj));
     setUser(userObj);
-    // Always redirect away from login/splash/onboarding after successful auth
-    const onScreen = hist.current[hist.current.length - 1];
-    if (['splash', 'login'].includes(onScreen)) {
-      const onboarded = localStorage.getItem('applyai_onboarded');
-      goTo(onboarded ? 'home' : 'onboarding');
-    }
+    setAuthLoading(false);
+    // Always use the latest goTo via ref to avoid stale closure
+    const navigate = goToRef.current;
+    const onboarded = localStorage.getItem('applyai_onboarded');
+    navigate(onboarded ? 'home' : 'onboarding');
   }
+
 
   // Auth check on mount
   useEffect(() => {
@@ -119,7 +126,8 @@ export default function JobPilotApp() {
     hist.current.push(screen);
     setCur(screen);
   }
-
+  // Keep ref always pointing to latest goTo
+  goToRef.current = goTo;
 
 
   function back() {
@@ -435,6 +443,19 @@ export default function JobPilotApp() {
     return (
       <div style={{ background: '#0D150D', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <i className="ti ti-loader" style={{ fontSize: 32, color: 'var(--lime)', animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    );
+  }
+
+  // Show full-screen loader while processing OAuth redirect
+  if (authLoading) {
+    return (
+      <div style={{ background: '#0D150D', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{ width: 56, height: 56, background: 'rgba(184,240,35,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <i className="ti ti-loader" style={{ fontSize: 28, color: '#B8F023', animation: 'spin 1s linear infinite' }} />
+        </div>
+        <div style={{ color: '#8BA882', fontSize: 14, fontWeight: 500 }}>Signing you in…</div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
