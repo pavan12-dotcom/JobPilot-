@@ -186,6 +186,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                 href={applyUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
+                id="view-site-button"
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
@@ -201,7 +202,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   transition: 'all 0.2s'
                 }}
               >
-                <i className="ti ti-external-link" style={{ fontSize: 11 }} /> View Posting
+                <i className="ti ti-external-link" style={{ fontSize: 11 }} /> View Site
               </a>
             )}
           </div>
@@ -396,8 +397,8 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                 ))}
               </div>
               {applyUrl && (
-                <a href={applyUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                  <i className="ti ti-external-link" /> View original posting
+                <a href={applyUrl} target="_blank" rel="noopener noreferrer" id="view-site-company-link" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+                  <i className="ti ti-external-link" /> View Site
                 </a>
               )}
               <div className="sp" />
