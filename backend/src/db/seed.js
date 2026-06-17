@@ -139,7 +139,9 @@ async function main() {
   for (const job of jobs) {
     const created = await prisma.job.upsert({
       where: { external_id: `demo-${job.company.toLowerCase().replace(/\s+/g, '-')}-${job.title.toLowerCase().replace(/\s+/g, '-')}` },
-      update: {},
+      update: {
+        apply_url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`)}&location=India`,
+      },
       create: {
         external_id: `demo-${job.company.toLowerCase().replace(/\s+/g, '-')}-${job.title.toLowerCase().replace(/\s+/g, '-')}`,
         source: job.source,
@@ -151,7 +153,7 @@ async function main() {
         requirements: 'Requirements:\n- 2-5 years of software development experience\n- Proficiency in Node.js / React / Python\n- Experience with PostgreSQL or similar databases\n- Strong understanding of REST APIs\n- Experience with cloud platforms (AWS/GCP)\n- Good communication skills',
         salary_min: job.salary_min,
         salary_max: job.salary_max,
-        apply_url: `https://jobs.${job.company.toLowerCase().replace(/\s+/g, '')}.com/apply/${uuidv4().substring(0, 8)}`,
+        apply_url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`)}&location=India`,
         posted_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
       },
     });
