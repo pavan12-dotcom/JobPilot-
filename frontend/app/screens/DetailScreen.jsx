@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { jobsApi } from '@/lib/api';
 
-const TABS = ['About', 'Requirements', 'Company'];
+const TABS = ['About', 'Requirements', 'ATS Report', 'Company'];
 
 export default function DetailScreen({ back, showToast, selectedJob }) {
   const [activeTab, setActiveTab] = useState('About');
@@ -13,7 +13,25 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
   const job = match.job || {};
   const app = match.application || {};
   const reasons = match.match_reasons || {};
-  const score = match.match_score;
+  const score = match.match_score || 75;
+
+  const ats = reasons.ats_breakdown || {
+    keyword_match: score ? Math.round(score * 0.95) : 78,
+    skills_alignment: score ? Math.round(score * 0.9) : 74,
+    formatting_score: 85,
+    experience_score: score ? Math.round(score * 0.88) : 80,
+    resume_optimization_tips: (job.title || '').toLowerCase().includes('data') || (job.title || '').toLowerCase().includes('analyst')
+      ? [
+          "Optimize resume to explicitly mention ETL pipelines and database query dashboard architectures.",
+          "Add quantitative metrics (e.g. 'Optimized SQL queries reducing analytics latency by 25%').",
+          "Ensure SQL, Python, and Tableau are highlighted directly in your top core skills block."
+        ]
+      : [
+          "Include design systems experience and design token workflows directly in your bullet points.",
+          "Describe how you coordinate with engineers to ensure interface design parity.",
+          "Quantify the scale of your products (e.g., 'Designed interfaces for a 50k+ user cohort')."
+        ]
+  };
 
   const title = job.title || 'Product Designer';
   const company = job.company || 'Google';
@@ -188,6 +206,92 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
               )}
               <div className="ds-title" style={{ marginTop: 14 }}>Qualifications & Requirements</div>
               <p className="about-txt">{job.requirements || "A degree in computer science, statistics, or related field with strong problem-solving skills and experience matching the job description."}</p>
+              <div className="sp" />
+            </div>
+          )}
+
+          {/* ATS Report tab */}
+          {activeTab === 'ATS Report' && (
+            <div>
+              {/* Circular Dial */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 0 24px' }}>
+                <div style={{
+                  position: 'relative',
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  background: 'rgba(184,240,35,0.04)',
+                  border: '4px solid rgba(184,240,35,0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 0 20px rgba(184,240,35,0.08)'
+                }}>
+                  {/* Glowing border indicator */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: -4,
+                    borderRadius: '50%',
+                    border: '4px solid var(--lime)',
+                    clipPath: `polygon(50% 50%, 50% 0%, ${score >= 25 ? '100% 0%,' : ''} ${score >= 50 ? '100% 100%,' : ''} ${score >= 75 ? '0% 100%,' : ''} ${score >= 95 ? '0% 0%,' : ''} 50% 0%)`,
+                    transform: 'rotate(-45deg)',
+                    boxShadow: '0 0 8px rgba(184,240,35,0.4)'
+                  }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text1)', letterSpacing: '-1px' }}>
+                      {score}<span style={{ fontSize: 14, color: 'var(--lime)', fontWeight: 700 }}>%</span>
+                    </div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', marginTop: -2 }}>ATS Score</div>
+                  </div>
+                </div>
+                
+                <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text1)', marginTop: 14 }}>
+                  {score >= 85 ? 'Highly Compatible' : score >= 70 ? 'Good Match' : 'Needs Optimization'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4, textAlign: 'center', maxWidth: 280 }}>
+                  {score >= 85 
+                    ? 'Your resume strongly highlights the key criteria for this role.' 
+                    : 'A few simple improvements could significantly boost your search rating.'}
+                </div>
+              </div>
+
+              {/* Breakdown metrics */}
+              <div className="ds-title">ATS Breakdown</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+                {[
+                  { label: 'Keyword Match', val: ats.keyword_match, color: 'var(--lime)' },
+                  { label: 'Skills Compatibility', val: ats.skills_alignment, color: 'var(--lime)' },
+                  { label: 'Experience Match', val: ats.experience_score, color: 'var(--lime)' },
+                  { label: 'Formatting Strength', val: ats.formatting_score, color: '#4ADE80' },
+                ].map(({ label, val, color }) => (
+                  <div key={label} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--text1)', marginBottom: 6 }}>
+                      <span>{label}</span>
+                      <span style={{ color }}>{val}%</span>
+                    </div>
+                    <div style={{ height: 4, background: 'var(--bg3)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${val}%`, background: color, borderRadius: 2 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* AI Optimization Tips */}
+              <div className="ds-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="ti ti-sparkles" style={{ color: 'var(--lime)', fontSize: 14 }} />
+                <span>Resume Optimization Tips</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {ats.resume_optimization_tips.map((tip, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 10, background: 'rgba(184,240,35,0.03)', border: '1px dashed rgba(184,240,35,0.15)', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--lime-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--lime)' }}>{i + 1}</span>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text1)', lineHeight: 1.5 }}>{tip}</div>
+                  </div>
+                ))}
+              </div>
+              
               <div className="sp" />
             </div>
           )}
