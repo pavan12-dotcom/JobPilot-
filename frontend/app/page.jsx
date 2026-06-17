@@ -120,6 +120,9 @@ export default function JobPilotApp() {
       try { setUser(JSON.parse(userData)); } catch {}
       setCur('home');
       hist.current = ['home'];
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({ screen: 'home' }, '', '#home');
+      }
     }
   }, []);
 
@@ -170,6 +173,9 @@ export default function JobPilotApp() {
     setPrev(cur);
     hist.current.push(screen);
     setCur(screen);
+    if (typeof window !== 'undefined') {
+      window.history.pushState({ screen }, '', `#${screen}`);
+    }
   }
   // Keep ref always pointing to latest goTo
   goToRef.current = goTo;
@@ -184,14 +190,49 @@ export default function JobPilotApp() {
     }
   }, [cur]);
 
+  // Intercept back button gestures/clicks and navigate within the app
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Set initial state on mount if none exists
+    if (!window.history.state) {
+      window.history.replaceState({ screen: cur }, '', `#${cur}`);
+    }
+
+    const handlePopState = (event) => {
+      const targetScreen = event.state?.screen;
+      if (targetScreen && targetScreen !== cur) {
+        setAnimDir('back');
+        setPrev(cur);
+        setCur(targetScreen);
+
+        // Keep local history ref array in sync
+        const idx = hist.current.lastIndexOf(targetScreen);
+        if (idx !== -1) {
+          hist.current = hist.current.slice(0, idx + 1);
+        } else {
+          hist.current.push(targetScreen);
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [cur]);
 
   function back() {
-    if (hist.current.length <= 1) return;
-    hist.current.pop();
-    const prevScreen = hist.current[hist.current.length - 1];
-    setAnimDir('back');
-    setPrev(cur);
-    setCur(prevScreen);
+    if (typeof window !== 'undefined' && window.history.state) {
+      window.history.back();
+    } else {
+      if (hist.current.length <= 1) return;
+      hist.current.pop();
+      const prevScreen = hist.current[hist.current.length - 1];
+      setAnimDir('back');
+      setPrev(cur);
+      setCur(prevScreen);
+    }
   }
 
   function showToast(msg) {
