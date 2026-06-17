@@ -432,12 +432,14 @@ export default function JobPilotApp() {
         {/* Screens */}
         <div className="screens">
           {Object.entries(SCREENS).map(([name, component]) => {
+            const isActive = name === cur;
+            const isPrev = name === prev;
             let cls = 'screen inactive';
-            if (name === cur) cls = 'screen active';
-            else if (name === prev) cls = 'screen out';
+            if (isActive) cls = 'screen active';
+            else if (isPrev) cls = 'screen out';
             return (
               <div key={name} className={cls}>
-                {component}
+                {(isActive || isPrev) ? component : null}
               </div>
             );
           })}

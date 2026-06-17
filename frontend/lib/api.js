@@ -14,8 +14,12 @@ api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('applyai_token');
+      const isPublic = config.url === '/auth/login' || config.url === '/auth/register';
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      } else if (!isPublic) {
+        // Block unauthenticated calls to protected endpoints to avoid 401 redirect loops
+        return Promise.reject(new Error('No authorization token available'));
       }
     }
     return config;

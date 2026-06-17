@@ -11,7 +11,12 @@ export const supabase = supabaseUrl && supabaseAnonKey
 // Auth helpers
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('Supabase not configured');
-  return supabase.auth.signInWithOAuth({ provider: 'google' });
+  return supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : 'http://localhost:3001/',
+    },
+  });
 }
 
 export async function signOut() {

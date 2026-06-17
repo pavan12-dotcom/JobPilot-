@@ -40,16 +40,33 @@ async function authenticate(req, res, next) {
           });
 
           if (!user) {
-            // Auto-create user from Supabase data
-            user = await prisma.user.create({
-              data: {
-                email: data.user.email,
-                name: data.user.user_metadata?.name || data.user.email.split('@')[0],
-                supabase_id: data.user.id,
-                avatar_url: data.user.user_metadata?.avatar_url,
-              },
+            // Check if user with same email already exists
+            user = await prisma.user.findUnique({
+              where: { email: data.user.email },
             });
-            logger.info(`Auto-created user: ${user.email}`);
+
+            if (user) {
+              // Link Supabase ID to existing user record
+              user = await prisma.user.update({
+                where: { id: user.id },
+                data: {
+                  supabase_id: data.user.id,
+                  avatar_url: user.avatar_url || data.user.user_metadata?.avatar_url,
+                },
+              });
+              logger.info(`🔗 Linked Supabase ID to existing user: ${user.email}`);
+            } else {
+              // Auto-create user from Supabase data
+              user = await prisma.user.create({
+                data: {
+                  email: data.user.email,
+                  name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+                  supabase_id: data.user.id,
+                  avatar_url: data.user.user_metadata?.avatar_url,
+                },
+              });
+              logger.info(`✅ Auto-created user: ${user.email}`);
+            }
           }
 
           req.user = user;
