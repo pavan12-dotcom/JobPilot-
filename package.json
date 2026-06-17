@@ -1,0 +1,31 @@
+{
+  "name": "jobpilot",
+  "version": "1.0.0",
+  "description": "JobPilot — AI-Powered Job Application Automation Platform",
+  "private": true,
+  "scripts": {
+    "setup": "node setup.js",
+    "dev": "node start-dev.js",
+    "backend": "npm --prefix backend run dev",
+    "frontend": "npm --prefix frontend run dev",
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm run build --prefix frontend",
+    "prisma:generate": "npm run prisma:generate --prefix backend",
+    "prisma:migrate": "npm run prisma:migrate --prefix backend",
+    "prisma:seed": "npm run seed --prefix backend",
+    "prisma:studio": "npm run prisma:studio --prefix backend",
+    "prisma:reset": "npm run prisma:reset --prefix backend"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "job-automation",
+    "ai",
+    "playwright",
+    "nextjs",
+    "gemini"
+  ],
+  "author": "JobPilot",
+  "license": "MIT"
+}

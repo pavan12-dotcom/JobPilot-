@@ -8,9 +8,9 @@
 
 ApplyAI is a full-stack platform that automates your job search end-to-end:
 
-1. **Upload your resume** → Claude AI extracts your skills, experience, and preferred roles
+1. **Upload your resume** → Gemini API extracts your skills, experience, and preferred roles
 2. **Set preferences** → target roles, locations, salary range, match score threshold
-3. **AI matches jobs** → Claude scores every new job against your resume (0–100)
+3. **AI matches jobs** → Gemini scores every new job against your resume (0–100)
 4. **Auto-apply** → Playwright browser automation fills and submits applications for 70%+ matches
 5. **Track everything** → Full application tracker with status, cover letters, automation logs
 
@@ -29,7 +29,7 @@ ApplyAI is a full-stack platform that automates your job search end-to-end:
 │                      BACKEND (Node.js + Express)                 │
 │                                                                  │
 │  Routes: auth / resume / jobs / applications / schedules        │
-│  AI:     Claude (parse + match + cover letter + form fill)       │
+│  AI:     Gemini (parse + match + cover letter + form fill)       │
 │  Queue:  Bull + Redis → 3 workers (fetch / match / apply)        │
 │  DB:     PostgreSQL 15 via Prisma ORM                           │
 │  Auth:   Supabase JWT (+ local JWT demo mode)                   │
@@ -45,7 +45,7 @@ ApplyAI is a full-stack platform that automates your job search end-to-end:
 │              BULL WORKERS                          │
 │                                                    │
 │  jobFetch.worker  → Adzuna + Remotive + TheMuse   │
-│  jobMatch.worker  → Claude AI scoring             │
+│  jobMatch.worker  → Gemini API scoring             │
 │  autoApply.worker → Playwright browser automation │
 └────────────────────────────────────────────────────┘
 ```
@@ -63,7 +63,7 @@ ApplyAI is a full-stack platform that automates your job search end-to-end:
 | Backend | Node.js + Express | Fast, familiar, huge ecosystem |
 | Database | PostgreSQL 15 + Prisma | JSONB for parsed data, strong type safety |
 | Queue | Bull + Redis | Reliable background jobs, rate limiting, retries |
-| AI | Claude Sonnet (claude-sonnet-4-5) | Best-in-class at structured JSON extraction |
+| AI | Gemini API (gemini-2.5-flash) | Official @google/genai client with retry mechanics |
 | Automation | Playwright (Chromium) | Most reliable browser automation library |
 | Job APIs | Adzuna + Remotive + TheMuse | Free tiers, wide coverage |
 | Email | Nodemailer | Simple, works with any SMTP |
@@ -75,34 +75,47 @@ ApplyAI is a full-stack platform that automates your job search end-to-end:
 
 ### Prerequisites
 - Node.js 18+
-- Docker Desktop
 - Git
+- Docker Desktop *(optional — only needed for Docker workflow)*
 
-### Quick Start
+### ⚡ One-Command Setup (Recommended)
 
 ```bash
-# 1. Clone and enter directory
+# 1. Clone the repo
 git clone <repo-url> applyai
 cd applyai
 
-# 2. Set up environment variables
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env.local
-
-# 3. Start all services (PostgreSQL + Redis + Backend + Frontend)
-docker-compose up -d
-
-# 4. Run database migrations
-docker exec applyai_backend npx prisma migrate deploy
-
-# 5. Seed demo data
-docker exec applyai_backend node src/db/seed.js
-
-# 6. Open the app
-open http://localhost:3001
+# 2. Run the interactive setup wizard
 ```
 
-### Without Docker (local dev)
+**Windows** — double-click `setup.bat` or run:
+```cmd
+setup.bat
+```
+
+**macOS / Linux:**
+```bash
+chmod +x setup.sh && ./setup.sh
+```
+
+The wizard will:
+- ✅ Check Node.js version (18+ required)
+- ✅ Create `backend/.env` and `frontend/.env.local` from templates
+- ✅ Prompt for your API keys (Gemini, Supabase, etc.)
+- ✅ Run `npm install` for backend and frontend
+- ✅ Generate Prisma client + apply migrations + seed demo data
+- ✅ Install Playwright Chromium for automation
+
+```bash
+# 3. Start both servers concurrently
+npm run dev
+```
+
+Open **http://localhost:3001** — done! 🎉
+
+---
+
+### Manual Setup (Alternative)
 
 ```bash
 # Install backend dependencies
@@ -110,27 +123,49 @@ cd backend && npm install
 
 # Copy and configure .env
 cp .env.example .env
-# Edit .env with your DATABASE_URL and REDIS_URL
+# Edit .env with your DATABASE_URL, GEMINI_API_KEY, and SUPABASE keys
 
-# Generate Prisma client
+# Generate Prisma client + run migrations + seed data
 npx prisma generate
-
-# Run migrations
-npx prisma migrate dev
-
-# Seed data
+npx prisma migrate deploy
 node src/db/seed.js
-
-# Start backend
-npm run dev
-# → http://localhost:3000
 
 # In another terminal: install and start frontend
 cd ../frontend && npm install
 cp .env.example .env.local
-npm run dev
-# → http://localhost:3001
+# Edit .env.local with your NEXT_PUBLIC_SUPABASE_URL and ANON_KEY
+
+# Start both from root (once npm run dev is configured)
+cd .. && npm run dev
 ```
+
+### Docker Compose (Full Stack)
+
+```bash
+# Start all services (PostgreSQL + Redis + Backend + Frontend)
+docker-compose up -d
+
+# Run migrations inside the container
+docker exec applyai_backend npx prisma migrate deploy
+docker exec applyai_backend node src/db/seed.js
+
+# Open the app
+open http://localhost:3001
+```
+
+### Handy Root-Level Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run setup` | Re-run the interactive setup wizard |
+| `npm run dev` | Start both servers concurrently |
+| `npm run backend` | Start only the backend |
+| `npm run frontend` | Start only the frontend |
+| `npm run install:all` | Install all npm dependencies |
+| `npm run prisma:studio` | Open Prisma Studio (DB browser) |
+| `npm run prisma:migrate` | Apply pending migrations |
+| `npm run prisma:seed` | Seed demo data |
+| `npm run prisma:reset` | Reset database (destructive!) |
 
 ---
 
@@ -153,25 +188,25 @@ Password: demo123
 ## How AI Features Work
 
 ### Resume Parsing
-PDF → `pdf-parse` (text extraction) → Claude Sonnet prompt → structured JSON saved to `resumes.parsed_data`
+PDF → `pdf-parse` (text extraction) → Gemini prompt → structured JSON saved to `resumes.parsed_data` via responseMimeType config.
 
-The Claude prompt asks for: name, email, phone, skills array, experience array, education, total years, current role, preferred roles, and a 2-sentence summary.
+The Gemini prompt extracts: name, email, phone, skills array, experience array, education, total years, current role, preferred roles, and a 2-sentence summary.
 
 ### Job Matching
 For each new job × each active user resume:
 - Pre-filter by user preferences (location, job type)
-- Send job description + resume data to Claude
-- Claude returns: match_score (0–100), skills_matched, skills_missing, experience_fit, role_alignment, summary
+- Send job description + resume data to Gemini
+- Gemini returns: match_score (0–100), skills_matched, skills_missing, experience_fit, role_alignment, summary
 - Scores saved to `job_matches` table
 - If score ≥ `min_match_score` AND `auto_apply_enabled` → enqueue auto-apply
 
-Claude is instructed to be strict: 70+ only for genuinely strong matches.
+Gemini is instructed to be strict: 70+ only for genuinely strong matches.
 
 ### Cover Letter Generation
-Before each application, Claude generates a personalized ≤200 word cover letter using the candidate's actual experience and the specific job description. It's instructed to avoid generic phrases and sound human and specific.
+Before each application, Gemini generates a personalized ≤200 word cover letter using the candidate's actual experience and the specific job description.
 
 ### Form Filling
-Playwright extracts all form field labels from the DOM and sends them to Claude with the candidate's resume data. Claude returns a JSON mapping of field → answer. The worker then fills each field.
+Playwright extracts all form field labels from the DOM and sends them to Gemini with the candidate's resume data. Gemini returns a JSON mapping of field → answer. The worker then fills each field.
 
 ---
 
@@ -225,7 +260,7 @@ See [`backend/.env.example`](./backend/.env.example) for all required variables.
 **Required for full functionality:**
 - `DATABASE_URL` — PostgreSQL connection string
 - `REDIS_URL` — Redis for Bull queues
-- `ANTHROPIC_API_KEY` — Claude AI for parsing/matching/letters
+- `GEMINI_API_KEY` — Gemini API key for parsing/matching/letters
 - `SUPABASE_URL` + `SUPABASE_SERVICE_KEY` — Auth + file storage
 
 **Optional (fall back to demo mode without):**
@@ -252,7 +287,7 @@ All protected routes require: `Authorization: Bearer <token>`
 |--------|------|-------------|
 | POST | `/resume/upload` | Upload + parse PDF |
 | GET | `/resume` | Get active resume |
-| POST | `/resume/:id/reparse` | Re-run Claude parser |
+| POST | `/resume/:id/reparse` | Re-run Gemini parser |
 
 ### Jobs
 | Method | Path | Description |
@@ -276,6 +311,28 @@ All protected routes require: `Authorization: Bearer <token>`
 | GET | `/dashboard/stats` | KPI metrics |
 | GET | `/dashboard/activity` | Activity feed |
 | GET | `/dashboard/insights` | AI insights |
+
+---
+
+## 📱 Mobile Application & PWA Installation
+
+JobPilot is configured as a fully installable **Progressive Web App (PWA)** that supports standalone full-screen mobile usage:
+
+### How to Install
+
+#### On iOS (Safari)
+1. Open the website `https://aipilot-dusky.vercel.app/` in **Safari**.
+2. Tap the **Share** button (the arrow box icon at the bottom center).
+3. Scroll down and tap **Add to Home Screen**.
+4. Tap **Add** in the top-right corner to install the icon on your screen.
+
+#### On Android (Chrome)
+1. Open the website in **Chrome**.
+2. Tap the **Install** pop-up prompt at the bottom of the screen.
+3. Alternatively, click the three-dot menu button in Chrome's top-right corner and select **Install app** or **Add to Home screen**.
+
+#### Custom In-App Installer
+Once logged in, open the **Profile** tab. If your browser supports PWA triggers, a custom, interactive **"Install JobPilot App"** banner will be visible. Tap **Install** to immediately set up the application on your home screen.
 
 ---
 
