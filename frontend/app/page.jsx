@@ -141,9 +141,20 @@ export default function JobPilotApp() {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('SW registered:', reg);
+          // Force check for updates on load
+          reg.update();
         }).catch((err) => {
           console.error('SW registration failed:', err);
         });
+      });
+
+      // Reload page immediately when a new SW controller takes over
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
       });
     }
 
