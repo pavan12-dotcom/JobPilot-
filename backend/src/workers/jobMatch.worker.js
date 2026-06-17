@@ -32,7 +32,7 @@ async function processJobMatch(job) {
   const existing = await prisma.jobMatch.findFirst({ where: { user_id: userId, job_id: jobId } });
   if (existing) return { skipped: true, reason: 'already matched' };
 
-  // Pre-filter: check if job matches user preferences before calling Claude
+  // Pre-filter: check if job matches user preferences before calling Gemini
   const prefs = user.preferences;
   const locationMatch =
     prefs.target_locations.length === 0 ||
@@ -48,7 +48,7 @@ async function processJobMatch(job) {
     return { skipped: true, reason: 'preference filter' };
   }
 
-  // Score with Claude AI
+  // Score with Gemini AI
   logger.debug(`Scoring ${jobRecord.title} at ${jobRecord.company} for ${user.email}`);
   const matchResult = await scoreJobMatch(resume.parsed_data, jobRecord);
 

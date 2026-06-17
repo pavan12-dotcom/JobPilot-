@@ -37,7 +37,7 @@ async function detectSiteAndApply(page, options) {
 
 /**
  * Generic form filler for unknown job sites
- * Scans DOM for form fields and uses Claude to fill them
+ * Scans DOM for form fields and uses Gemini to fill them
  */
 async function applyGeneric(page, { resumeData, coverLetter, jobData, onLog }) {
   const log = onLog || (() => {});
@@ -80,7 +80,7 @@ async function applyGeneric(page, { resumeData, coverLetter, jobData, onLog }) {
 
     await log('Generic: Fields detected', { count: formFields.length });
 
-    // Use Claude to fill fields
+    // Use Gemini to fill fields
     const fieldLabels = formFields.map((f) => f.label);
     const answers = await fillFormFields(fieldLabels, resumeData, jobData);
 

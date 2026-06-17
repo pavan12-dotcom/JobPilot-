@@ -82,7 +82,7 @@ router.delete(
   }),
 );
 
-// POST /api/resume/:id/reparse — Re-run Claude parser
+// POST /api/resume/:id/reparse — Re-run Gemini parser
 router.post(
   '/:id/reparse',
   authenticate,

@@ -1,11 +1,11 @@
 // src/ai/resumeParser.js
-const { callClaude } = require('../config/claude');
+const { callGemini } = require('../config/gemini');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are an expert resume parser. Extract structured data from resume text and return ONLY valid JSON. Do not include any explanation or markdown formatting outside the JSON.`;
 
 /**
- * Parse raw resume text using Claude AI
+ * Parse raw resume text using Gemini AI
  * @param {string} rawText - Extracted text from PDF
  * @returns {Object} Structured resume data
  */
@@ -41,8 +41,8 @@ async function parseResume(rawText) {
 Resume text:
 ${rawText}`;
 
-  logger.info('🤖 Parsing resume with Claude...');
-  const result = await callClaude(prompt, SYSTEM_PROMPT, true);
+  logger.info('🤖 Parsing resume with Gemini...');
+  const result = await callGemini(prompt, SYSTEM_PROMPT, true);
   logger.info(`✅ Resume parsed: ${result.name}, ${result.skills?.length} skills found`);
 
   return result;

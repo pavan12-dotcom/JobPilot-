@@ -1,11 +1,11 @@
 // src/ai/formFiller.js
-const { callClaude } = require('../config/claude');
+const { callGemini } = require('../config/gemini');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are a job application form assistant. Given form field labels and a candidate's profile, map each field to the best answer. Return ONLY valid JSON. Never make up information not present in the profile.`;
 
 /**
- * Use Claude to fill application form fields from resume data
+ * Use Gemini to fill application form fields from resume data
  * @param {Array<string>} fieldLabels - Array of form field labels from DOM
  * @param {Object} resumeData - Parsed resume data
  * @param {Object} jobData - Job details for context
@@ -50,8 +50,8 @@ Rules:
 - For unknown fields: return ""`;
 
   const env = require('../config/env');
-  if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY.startsWith('sk-ant')) {
-    logger.warn(`⚠️ No Claude API key — using mock answers for form fields`);
+  if (!env.GEMINI_API_KEY) {
+    logger.warn(`⚠️ No Gemini API key — using mock answers for form fields`);
     const mockAnswers = {};
     for (const label of fieldLabels) {
       const lower = label.toLowerCase();
@@ -67,8 +67,8 @@ Rules:
     return mockAnswers;
   }
 
-  logger.debug(`Filling ${fieldLabels.length} form fields with Claude`);
-  const result = await callClaude(prompt, SYSTEM_PROMPT, true);
+  logger.debug(`Filling ${fieldLabels.length} form fields with Gemini`);
+  const result = await callGemini(prompt, SYSTEM_PROMPT, true);
   logger.debug('Form fields filled successfully');
 
   return result;

@@ -79,10 +79,10 @@ async function uploadAndParseResume(file, userId, label = null) {
     data: { is_active: false },
   });
 
-  // 4. Parse with Claude (or use mock in demo mode)
+  // 4. Parse with Gemini (or use mock in demo mode)
   let parsedData;
-  if (!env.ANTHROPIC_API_KEY) {
-    logger.warn('⚠️ No Claude API key — using mock parsed data');
+  if (!env.GEMINI_API_KEY) {
+    logger.warn('⚠️ No Gemini API key — using mock parsed data');
     parsedData = {
       name: 'Demo User',
       email: 'demo@example.com',
@@ -116,7 +116,7 @@ async function uploadAndParseResume(file, userId, label = null) {
 }
 
 /**
- * Re-run Claude parser on an existing resume
+ * Re-run Gemini parser on an existing resume
  */
 async function reparseResume(resumeId, userId) {
   const resume = await prisma.resume.findFirst({

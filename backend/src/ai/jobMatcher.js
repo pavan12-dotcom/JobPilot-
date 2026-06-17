@@ -1,11 +1,11 @@
 // src/ai/jobMatcher.js
-const { callClaude } = require('../config/claude');
+const { callGemini } = require('../config/gemini');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are a strict job match analyzer for a recruitment platform. Evaluate candidates honestly and return ONLY valid JSON. Never inflate scores — be genuinely helpful to job seekers by being accurate.`;
 
 /**
- * Score a job against a candidate's resume using Claude AI
+ * Score a job against a candidate's resume using Gemini AI
  * @param {Object} resumeData - Parsed resume data
  * @param {Object} job - Job object with title, description, requirements
  * @returns {Object} Match result with score and reasons
@@ -39,8 +39,8 @@ Return ONLY this JSON (no other text):
 }`;
 
   const env = require('../config/env');
-  if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY.startsWith('sk-ant')) {
-    logger.warn(`⚠️ No Claude API key — using mock score for ${job.title}`);
+  if (!env.GEMINI_API_KEY) {
+    logger.warn(`⚠️ No Gemini API key — using mock score for ${job.title}`);
     const score = 65 + (job.title.length + job.company.length) % 31;
     return {
       match_score: score,
@@ -52,7 +52,7 @@ Return ONLY this JSON (no other text):
     };
   }
 
-  const result = await callClaude(prompt, SYSTEM_PROMPT, true);
+  const result = await callGemini(prompt, SYSTEM_PROMPT, true);
   logger.debug(`Job match scored: ${job.title} at ${job.company} → ${result.match_score}/100`);
 
   return result;

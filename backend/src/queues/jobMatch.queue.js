@@ -17,7 +17,7 @@ function getJobMatchQueue() {
       removeOnFail: 100,
     },
     limiter: {
-      max: 100, // Max 100 jobs per minute (Claude rate limit)
+      max: 15, // Gemini free tier allows 15 RPM, let's keep concurrency/limits safe
       duration: 60000,
     },
   });

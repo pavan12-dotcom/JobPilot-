@@ -1,11 +1,11 @@
 // src/ai/coverLetter.js
-const { callClaude } = require('../config/claude');
+const { callGemini } = require('../config/gemini');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are an expert cover letter writer. Write concise, human-sounding cover letters that are specific to the candidate and job. Never use clichés or generic opening lines.`;
 
 /**
- * Generate a personalized cover letter using Claude AI
+ * Generate a personalized cover letter using Gemini AI
  * @param {Object} resumeData - Parsed resume data
  * @param {Object} job - Job details
  * @param {Object} matchReasons - Match analysis from jobMatcher
@@ -44,8 +44,8 @@ RULES:
 Write the cover letter:`;
 
   const env = require('../config/env');
-  if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY.startsWith('sk-ant')) {
-    logger.warn(`⚠️ No Claude API key — using mock cover letter for ${job.title}`);
+  if (!env.GEMINI_API_KEY) {
+    logger.warn(`⚠️ No Gemini API key — using mock cover letter for ${job.title}`);
     return `Dear Hiring Manager at ${job.company},
 
 I am writing to express my interest in the ${job.title} role. With over ${resumeData.total_experience_years || 3} years of professional experience, including my recent role as ${resumeData.current_role || 'Developer'}, I am confident that my skills in ${resumeData.skills?.slice(0, 3).join(', ') || 'software development'} align well with your team's goals.
@@ -57,7 +57,7 @@ ${resumeData.name || 'Alex Kumar'}`;
   }
 
   logger.debug(`Generating cover letter for ${job.title} at ${job.company}`);
-  const letter = await callClaude(prompt, SYSTEM_PROMPT, false);
+  const letter = await callGemini(prompt, SYSTEM_PROMPT, false);
   logger.debug(`Cover letter generated: ${letter.split(' ').length} words`);
 
   return letter.trim();

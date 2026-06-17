@@ -3,7 +3,7 @@ const express = require('express');
 const prisma = require('../../db/prisma');
 const { authenticate } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../../utils/asyncHandler');
-const { callClaude } = require('../../config/claude');
+const { callGemini } = require('../../config/gemini');
 const env = require('../../config/env');
 
 const router = express.Router();
@@ -115,8 +115,8 @@ router.get(
       }),
     ]);
 
-    // If no Claude API key, return static insights
-    if (!env.ANTHROPIC_API_KEY) {
+    // If no Gemini API key, return static insights
+    if (!env.GEMINI_API_KEY) {
       return res.json({
         success: true,
         data: {
@@ -143,7 +143,7 @@ Return JSON array with 3 objects: [{ "type": "tip"|"warning"|"positive", "messag
 
     let insights;
     try {
-      insights = await callClaude(prompt, 'You are a career coach. Return only valid JSON.', true);
+      insights = await callGemini(prompt, 'You are a career coach. Return only valid JSON.', true);
     } catch {
       insights = [{ type: 'tip', message: 'Keep applying consistently — most job seekers get interviews after 20+ applications.' }];
     }
