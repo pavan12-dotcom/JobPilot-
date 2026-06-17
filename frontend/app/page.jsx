@@ -26,6 +26,7 @@ export default function JobPilotApp() {
   const [selectedJob, setSelectedJob] = useState(null);
   const [mounted, setMounted] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const toastTimeout = useRef(null);
   const hist = useRef(['splash']);
   const goToRef = useRef(null);
@@ -114,16 +115,46 @@ export default function JobPilotApp() {
     }
   }, []);
 
-  // Live clock
+  // Live clock & SW/PWA Registration
   useEffect(() => {
+    // Service Worker Registration
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          console.log('SW registered:', reg);
+        }).catch((err) => {
+          console.error('SW registration failed:', err);
+        });
+      });
+    }
+
+    // Listen for PWA installation prompt
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
     function tick() {
       const now = new Date();
       setTime(`${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`);
     }
     tick();
     const id = setInterval(tick, 30000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+    };
   }, []);
+
+  async function installApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  }
 
   function goTo(screen) {
     if (screen === cur) return;
@@ -171,7 +202,7 @@ export default function JobPilotApp() {
     search: <ExploreScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} />,
-    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} back={back} />,
+    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} back={back} installApp={installApp} isInstallable={!!deferredPrompt} />,
     notifications: <NotificationsScreen back={back} />,
   };
 
@@ -483,14 +514,6 @@ export default function JobPilotApp() {
     <>
       {styleTag}
       <div className="phone">
-        {/* Status bar */}
-        <div className="status-bar">
-          <span className="time">{time}</span>
-          <div className="status-icons">
-            <i className="ti ti-wifi" /><i className="ti ti-signal-4g" /><i className="ti ti-battery" />
-          </div>
-        </div>
-
         {/* Screens */}
         <div className="screens">
           {Object.entries(SCREENS).map(([name, component]) => {

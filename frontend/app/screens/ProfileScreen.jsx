@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi, resumeApi, preferencesApi } from '@/lib/api';
 
-export default function ProfileScreen({ goTo, user, showToast, setUser, back }) {
+export default function ProfileScreen({ goTo, user, showToast, setUser, back, installApp, isInstallable }) {
   const [stats, setStats] = useState(null);
   const [resume, setResume] = useState(null);
   const [prefs, setPrefs] = useState(null);
@@ -97,6 +97,19 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back }) 
             <div style={{ height: '100%', width: `${profilePct}%`, background: 'var(--lime)', borderRadius: 2, transition: 'width 0.5s ease' }} />
           </div>
         </div>
+
+        {/* PWA Install Banner */}
+        {isInstallable && (
+          <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.06) 100%)', border: '1px solid var(--lime)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 20px rgba(184,240,35,0.08)' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Install JobPilot App</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Add to your home screen for native experience</div>
+            </div>
+            <button onClick={installApp} style={{ background: 'var(--lime)', color: 'var(--bg)', border: 'none', borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: 11, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Install <i className="ti ti-download" style={{ fontSize: 12 }} />
+            </button>
+          </div>
+        )}
 
         {/* Auto-apply status */}
         {prefs && (
