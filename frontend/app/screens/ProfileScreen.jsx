@@ -41,11 +41,11 @@ function InstallBanner({ installApp, isInstallable }) {
   // Android / Chrome — native install prompt
   if (isInstallable) {
     return (
-      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.05) 100%)', border: '1px solid var(--lime)', borderRadius: 'var(--radius-md)', padding: '14px 16px', boxShadow: '0 4px 20px rgba(184,240,35,0.08)' }}>
+      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(0, 229, 255, 0.05) 100%)', border: '1px solid var(--lime)', borderRadius: 'var(--radius-md)', padding: '14px 16px', boxShadow: '0 4px 20px rgba(0, 229, 255, 0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="ti ti-device-mobile" style={{ fontSize: 18, color: '#0D150D' }} />
+              <i className="ti ti-device-mobile" style={{ fontSize: 18, color: '#050A1A' }} />
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Install JobPilot App</div>
@@ -54,7 +54,7 @@ function InstallBanner({ installApp, isInstallable }) {
           </div>
           <button
             onClick={installApp}
-            style={{ background: 'var(--lime)', color: '#0D150D', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
+            style={{ background: 'var(--lime)', color: '#050A1A', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
           >
             <i className="ti ti-download" style={{ fontSize: 13 }} /> Install
           </button>
@@ -66,14 +66,14 @@ function InstallBanner({ installApp, isInstallable }) {
   // iOS Safari — step-by-step guide
   if (ios) {
     return (
-      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.04) 100%)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(0, 229, 255, 0.04) 100%)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
         <button
           onClick={() => setShowGuide(!showGuide)}
           style={{ width: '100%', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', font: 'inherit' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <i className="ti ti-brand-apple" style={{ fontSize: 18, color: '#0D150D' }} />
+              <i className="ti ti-brand-apple" style={{ fontSize: 18, color: '#050A1A' }} />
             </div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Add to Home Screen</div>
@@ -91,7 +91,7 @@ function InstallBanner({ installApp, isInstallable }) {
               { n: 3, icon: 'ti-check', text: 'Tap "Add"', sub: 'JobPilot appears on your home screen like a real native app' },
             ].map(({ n, icon, text, sub }) => (
               <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--lime)', color: '#0D150D', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--lime)', color: '#050A1A', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                     <i className={`ti ${icon}`} style={{ fontSize: 13, color: 'var(--lime)' }} />
@@ -101,7 +101,7 @@ function InstallBanner({ installApp, isInstallable }) {
                 </div>
               </div>
             ))}
-            <div style={{ background: 'rgba(184,240,35,0.06)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border)' }}>
+            <div style={{ background: 'rgba(0, 229, 255, 0.06)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border)' }}>
               <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>
                 <i className="ti ti-info-circle" style={{ fontSize: 12, color: 'var(--lime)', marginRight: 4 }} />
                 Must use <strong style={{ color: 'var(--text1)' }}>Safari</strong> on iOS — Add to Home Screen only works in Safari.
