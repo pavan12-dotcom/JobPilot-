@@ -195,8 +195,8 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   fontSize: 11, 
                   fontWeight: 700, 
                   textDecoration: 'none',
-                  background: 'rgba(184,240,35,0.06)',
-                  border: '1px solid rgba(184, 240, 35, 0.2)',
+                  background: 'rgba(0, 229, 255, 0.06)',
+                  border: '1px solid rgba(0, 229, 255, 0.2)',
                   borderRadius: 'var(--radius-full)',
                   padding: '4px 12px',
                   transition: 'all 0.2s'
@@ -301,7 +301,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                       cy="60"
                       r="52"
                       fill="transparent"
-                      stroke="rgba(184, 240, 35, 0.08)"
+                      stroke="rgba(0, 229, 255, 0.08)"
                       strokeWidth="6"
                     />
                     {/* Dynamic Progress Circle */}
@@ -316,7 +316,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                       strokeDashoffset={326.7 - (score / 100) * 326.7}
                       strokeLinecap="round"
                       style={{
-                        filter: 'drop-shadow(0px 0px 6px rgba(184, 240, 35, 0.6))',
+                        filter: 'drop-shadow(0px 0px 6px rgba(0, 229, 255, 0.6))',
                         transition: 'stroke-dashoffset 0.8s ease-in-out',
                       }}
                     />
@@ -369,7 +369,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {ats.resume_optimization_tips.map((tip, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 10, background: 'rgba(184,240,35,0.03)', border: '1px dashed rgba(184,240,35,0.15)', borderRadius: 12, padding: '12px 14px' }}>
+                  <div key={i} style={{ display: 'flex', gap: 10, background: 'rgba(0, 229, 255, 0.03)', border: '1px dashed rgba(0, 229, 255, 0.15)', borderRadius: 12, padding: '12px 14px' }}>
                     <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--lime-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
                       <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--lime)' }}>{i + 1}</span>
                     </div>

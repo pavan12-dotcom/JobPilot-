@@ -320,9 +320,13 @@ export default function JobPilotApp() {
           background:var(--bg);display:flex;flex-direction:column;scrollbar-width:none;
           transition:transform 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.32s ease}
         .screen::-webkit-scrollbar{display:none}
-        .screen.inactive{transform:translateX(100%);pointer-events:none;z-index:1}
-        .screen.out{transform:translateX(-28%);pointer-events:none;z-index:1}
-        .screen.active{transform:translateX(0);opacity:1;z-index:10}
+        .screens .screen.inactive{transform:translateX(100%);pointer-events:none;z-index:1;opacity:0}
+        .screens .screen.out{transform:translateX(-28%);pointer-events:none;z-index:1;opacity:0.5}
+        .screens .screen.active{transform:translateX(0);opacity:1;z-index:10}
+        
+        .screens.back .screen.inactive{transform:translateX(-28%);pointer-events:none;z-index:1;opacity:0.5}
+        .screens.back .screen.out{transform:translateX(100%);pointer-events:none;z-index:10;opacity:1}
+        .screens.back .screen.active{transform:translateX(0);opacity:1;z-index:5}
         .bnav{background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 20px;
           display:flex;justify-content:space-around;flex-shrink:0;z-index:20}
         .nbtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
@@ -484,7 +488,7 @@ export default function JobPilotApp() {
         .srch-inp-wrap{padding:10px 20px 14px}
         .srch-inp{display:flex;gap:10px;align-items:center;background:var(--bg2);
           border:1.5px solid var(--lime);border-radius:var(--radius-full);padding:11px 16px;
-          box-shadow:0 0 0 4px rgba(184,240,35,0.06)}
+          box-shadow:0 0 0 4px rgba(0, 229, 255, 0.06)}
         .srch-inp i{font-size:17px;color:var(--lime)}
         .f-sec{padding:0 20px 12px}
         .f-lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;
@@ -529,7 +533,7 @@ export default function JobPilotApp() {
         .prof-hero{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px 22px;text-align:center}
         .prof-ava{width:72px;height:72px;border-radius:50%;background:var(--lime);margin:0 auto 10px;
           display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;
-          color:var(--bg);border:3px solid rgba(184,240,35,0.25)}
+          color:var(--bg);border:3px solid rgba(0, 229, 255, 0.25)}
         .prof-name{font-size:19px;font-weight:800;color:var(--text1)}
         .prof-role{font-size:12px;color:var(--text2);margin-top:3px}
         .prof-loc{font-size:11px;color:var(--text3);margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px}
@@ -601,7 +605,7 @@ export default function JobPilotApp() {
       {styleTag}
       <div className="phone">
         {/* Screens */}
-        <div className="screens">
+        <div className={`screens ${animDir}`}>
           {Object.entries(SCREENS).map(([name, component]) => {
             const isActive = name === cur;
             const isPrev = name === prev;
