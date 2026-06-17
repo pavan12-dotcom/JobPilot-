@@ -168,6 +168,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     { icon: 'ti-user', label: 'My Profile', sub: 'Resume, skills, portfolio', badge: null, action: () => showToast('Profile editor coming soon!') },
     { icon: 'ti-file-text', label: 'My Applications', sub: 'Track all applications', badge: s.total_applied || '12', action: () => goTo('saved') },
     { icon: 'ti-bell', label: 'Job Alerts', sub: '3 active alerts', badge: null, action: () => goTo('notifications') },
+    { icon: 'ti-shield', label: 'Notification Settings', sub: 'Allow or manage alerts', badge: null, action: () => goTo('permissions') },
   ];
   const prefItems = [
     { icon: 'ti-adjustments', label: 'Job Preferences', sub: prefs?.target_roles?.[0] ? `${prefs.target_roles[0]}, +${prefs.target_roles.length - 1}` : 'Role, salary, location', action: () => goTo('onboarding') },

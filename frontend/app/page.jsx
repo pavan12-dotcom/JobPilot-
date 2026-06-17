@@ -10,10 +10,11 @@ import SavedScreen from './screens/SavedScreen';
 import DetailScreen from './screens/DetailScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import NotificationsScreen from './screens/NotificationsScreen';
+import PermissionScreen from './screens/PermissionScreen';
 import { supabase } from '@/lib/supabase';
 import { authApi } from '@/lib/api';
 
-const NO_NAV = ['splash', 'login', 'onboarding', 'detail', 'notifications'];
+const NO_NAV = ['splash', 'login', 'onboarding', 'detail', 'notifications', 'permissions'];
 const MAIN_TABS = ['home', 'search', 'saved', 'profile'];
 
 export default function JobPilotApp() {
@@ -100,7 +101,14 @@ export default function JobPilotApp() {
     // Always use the latest goTo via ref to avoid stale closure
     const navigate = goToRef.current;
     const onboarded = localStorage.getItem('applyai_onboarded');
-    navigate(onboarded ? 'home' : 'onboarding');
+    const permsDone = localStorage.getItem('jobpilot_permissions_done');
+    if (!onboarded) {
+      navigate('onboarding');
+    } else if (!permsDone) {
+      navigate('permissions');
+    } else {
+      navigate('home');
+    }
   }
 
 
@@ -203,6 +211,7 @@ export default function JobPilotApp() {
     saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} />,
     profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} back={back} installApp={installApp} isInstallable={!!deferredPrompt} />,
+    permissions: <PermissionScreen goTo={goTo} showToast={showToast} />,
     notifications: <NotificationsScreen back={back} />,
   };
 
