@@ -97,8 +97,14 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
     try {
       await jobsApi.apply(job.id);
       showToast('🚀 Application submitted successfully!');
+      if (job.apply_url) {
+        window.open(job.apply_url, '_blank', 'noopener,noreferrer');
+      }
     } catch {
       showToast('🚀 Application submitted!');
+      if (job.apply_url) {
+        window.open(job.apply_url, '_blank', 'noopener,noreferrer');
+      }
     } finally {
       setApplying(false);
     }
@@ -134,12 +140,37 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
           <div className="det-logo">{company[0]}</div>
           <div className="det-title">{title}</div>
           <div className="det-co">{company} · {location} · {job.posted_at ? new Date(job.posted_at).toLocaleDateString() : '2 days ago'}</div>
-          {score && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 8, background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', padding: '4px 12px' }}>
-              <i className="ti ti-sparkles" style={{ fontSize: 12, color: 'var(--lime)' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)' }}>{score}% AI Match</span>
-            </div>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+            {score && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', padding: '4px 12px' }}>
+                <i className="ti ti-sparkles" style={{ fontSize: 12, color: 'var(--lime)' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)' }}>{score}% AI Match</span>
+              </div>
+            )}
+            {job.apply_url && (
+              <a 
+                href={job.apply_url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 5, 
+                  color: 'var(--lime)', 
+                  fontSize: 11, 
+                  fontWeight: 700, 
+                  textDecoration: 'none',
+                  background: 'rgba(184,240,35,0.06)',
+                  border: '1px solid rgba(184, 240, 35, 0.2)',
+                  borderRadius: 'var(--radius-full)',
+                  padding: '4px 12px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <i className="ti ti-external-link" style={{ fontSize: 11 }} /> View Posting
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="det-stats">
@@ -330,8 +361,8 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   </div>
                 ))}
               </div>
-              {job.url && (
-                <a href={job.url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+              {job.apply_url && (
+                <a href={job.apply_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
                   <i className="ti ti-external-link" /> View original posting
                 </a>
               )}
