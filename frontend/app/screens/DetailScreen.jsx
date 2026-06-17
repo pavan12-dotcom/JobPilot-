@@ -219,25 +219,45 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   position: 'relative',
                   width: 120,
                   height: 120,
-                  borderRadius: '50%',
-                  background: 'rgba(184,240,35,0.04)',
-                  border: '4px solid rgba(184,240,35,0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 0 20px rgba(184,240,35,0.08)'
                 }}>
-                  {/* Glowing border indicator */}
-                  <div style={{
-                    position: 'absolute',
-                    inset: -4,
-                    borderRadius: '50%',
-                    border: '4px solid var(--lime)',
-                    clipPath: `polygon(50% 50%, 50% 0%, ${score >= 25 ? '100% 0%,' : ''} ${score >= 50 ? '100% 100%,' : ''} ${score >= 75 ? '0% 100%,' : ''} ${score >= 95 ? '0% 0%,' : ''} 50% 0%)`,
-                    transform: 'rotate(-45deg)',
-                    boxShadow: '0 0 8px rgba(184,240,35,0.4)'
-                  }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {/* SVG Circular Gauge */}
+                  <svg style={{
+                    transform: 'rotate(-90deg)',
+                    width: 120,
+                    height: 120,
+                  }}>
+                    {/* Background Track */}
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="transparent"
+                      stroke="rgba(184, 240, 35, 0.08)"
+                      strokeWidth="6"
+                    />
+                    {/* Dynamic Progress Circle */}
+                    <circle
+                      cx="60"
+                      cy="60"
+                      r="52"
+                      fill="transparent"
+                      stroke="var(--lime)"
+                      strokeWidth="8"
+                      strokeDasharray="326.7"
+                      strokeDashoffset={326.7 - (score / 100) * 326.7}
+                      strokeLinecap="round"
+                      style={{
+                        filter: 'drop-shadow(0px 0px 6px rgba(184, 240, 35, 0.6))',
+                        transition: 'stroke-dashoffset 0.8s ease-in-out',
+                      }}
+                    />
+                  </svg>
+                  
+                  {/* Score Label inside Ring */}
+                  <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text1)', letterSpacing: '-1px' }}>
                       {score}<span style={{ fontSize: 14, color: 'var(--lime)', fontWeight: 700 }}>%</span>
                     </div>
