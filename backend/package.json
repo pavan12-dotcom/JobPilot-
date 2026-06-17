@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "ApplyAI Backend — AI-powered job application automation",
   "main": "src/app.js",
+  "prisma": {
+    "schema": "src/db/prisma/schema.prisma"
+  },
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
