@@ -37,33 +37,58 @@ export default function JobPilotApp() {
   useEffect(() => {
     if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // Handle OAuth callback on page load (token in URL hash)
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         const token = session.access_token;
         localStorage.setItem('applyai_token', token);
-        
-        try {
-          const userRes = await authApi.me();
-          const userObj = userRes.data;
-          localStorage.setItem('applyai_user', JSON.stringify(userObj));
-          setUser(userObj);
-          
-          if (hist.current.includes('login') || hist.current.includes('splash')) {
-            const onboarded = localStorage.getItem('applyai_onboarded');
-            goTo(onboarded ? 'home' : 'onboarding');
-          }
-        } catch (err) {
-          console.error('Failed to sync user with backend:', err);
-        }
-      } else {
+        await syncUserFromSession(session);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
         localStorage.removeItem('applyai_token');
         localStorage.removeItem('applyai_user');
         setUser(null);
+        return;
+      }
+      if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED')) {
+        const token = session.access_token;
+        localStorage.setItem('applyai_token', token);
+        await syncUserFromSession(session);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  async function syncUserFromSession(session) {
+    let userObj = null;
+    try {
+      const userRes = await authApi.me();
+      userObj = userRes.data;
+    } catch (err) {
+      console.warn('Backend sync failed, using Supabase user data:', err?.message);
+      // Fallback: build user object from Supabase session
+      const su = session.user;
+      userObj = {
+        id: su.id,
+        email: su.email,
+        name: su.user_metadata?.full_name || su.user_metadata?.name || su.email?.split('@')[0],
+        avatar_url: su.user_metadata?.avatar_url || null,
+      };
+    }
+    if (!userObj) return;
+    localStorage.setItem('applyai_user', JSON.stringify(userObj));
+    setUser(userObj);
+    // Always redirect away from login/splash/onboarding after successful auth
+    const onScreen = hist.current[hist.current.length - 1];
+    if (['splash', 'login'].includes(onScreen)) {
+      const onboarded = localStorage.getItem('applyai_onboarded');
+      goTo(onboarded ? 'home' : 'onboarding');
+    }
+  }
 
   // Auth check on mount
   useEffect(() => {
