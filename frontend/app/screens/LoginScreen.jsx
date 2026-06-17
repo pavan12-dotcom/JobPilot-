@@ -46,7 +46,7 @@ export default function LoginScreen({ goTo, setUser }) {
       {/* Demo banner */}
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: 20, fontSize: 11 }}>
         <div style={{ color: 'var(--lime)', fontWeight: 700, marginBottom: 3 }}>🎯 Demo Credentials</div>
-        <div style={{ color: 'var(--text2)' }}>Email: <span style={{ color: 'var(--text1)', fontFamily: 'monospace' }}>demo@applyai.dev</span></div>
+        <div style={{ color: 'var(--text2)' }}>Email: <span style={{ color: 'var(--text1)', fontFamily: 'monospace' }}>demo@jobpilot.dev</span></div>
         <div style={{ color: 'var(--text2)' }}>Password: <span style={{ color: 'var(--text1)', fontFamily: 'monospace' }}>demo123</span></div>
       </div>
 

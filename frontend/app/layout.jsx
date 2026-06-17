@@ -2,8 +2,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'JobPilot – AI Job Application Automation',
-  description: 'Find your dream job faster. AI-powered resume matching, auto-apply, and application tracking. Install the app on your phone.',
+  title: 'JobPilot',
+  description: 'AI-powered job application automation — find and auto-apply to matching jobs in seconds.',
   applicationName: 'JobPilot',
   keywords: ['jobs', 'ai', 'resume', 'automation', 'career', 'job search'],
   authors: [{ name: 'JobPilot' }],
@@ -18,14 +18,14 @@ export const metadata = {
   },
   openGraph: {
     type: 'website',
-    title: 'JobPilot – AI Job Application Automation',
-    description: 'Apply to hundreds of matching jobs automatically with AI.',
+    title: 'JobPilot',
+    description: 'AI-powered job application automation — find and auto-apply to matching jobs.',
     siteName: 'JobPilot',
   },
   twitter: {
     card: 'summary',
-    title: 'JobPilot – AI Job Application Automation',
-    description: 'Apply to hundreds of matching jobs automatically with AI.',
+    title: 'JobPilot',
+    description: 'AI-powered job application automation — find and auto-apply to matching jobs.',
   },
 };
 

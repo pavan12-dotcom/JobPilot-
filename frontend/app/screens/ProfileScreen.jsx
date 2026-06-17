@@ -132,7 +132,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   const [prefs, setPrefs] = useState(null);
 
   const name = user?.name || 'Arun Reddy';
-  const email = user?.email || 'demo@applyai.dev';
+  const email = user?.email || 'demo@jobpilot.dev';
   const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   const prefItems = [
     { icon: 'ti-adjustments', label: 'Job Preferences', sub: prefs?.target_roles?.[0] ? `${prefs.target_roles[0]}, +${prefs.target_roles.length - 1}` : 'Role, salary, location', action: () => goTo('onboarding') },
     { icon: 'ti-lock', label: 'Privacy', sub: 'Who can see your profile', action: () => showToast('Privacy settings coming soon!') },
-    { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@applyai.dev') },
+    { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@jobpilot.dev') },
   ];
 
   return (
