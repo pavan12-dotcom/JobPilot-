@@ -31,6 +31,8 @@ export default function JobPilotApp() {
   const toastTimeout = useRef(null);
   const hist = useRef(['splash']);
   const goToRef = useRef(null);
+  const lastBackTimeRef = useRef(0);
+
 
   // Mount check + detect OAuth callback (PKCE uses ?code= query param)
   useEffect(() => {
@@ -121,7 +123,13 @@ export default function JobPilotApp() {
       setCur('home');
       hist.current = ['home'];
       if (typeof window !== 'undefined') {
-        window.history.replaceState({ screen: 'home' }, '', '#home');
+        window.history.replaceState({ screen: 'exit' }, '', '#exit');
+        window.history.pushState({ screen: 'home' }, '', '#home');
+      }
+    } else {
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({ screen: 'exit' }, '', '#exit');
+        window.history.pushState({ screen: 'splash' }, '', '#splash');
       }
     }
   }, []);
@@ -174,7 +182,12 @@ export default function JobPilotApp() {
     hist.current.push(screen);
     setCur(screen);
     if (typeof window !== 'undefined') {
-      window.history.pushState({ screen }, '', `#${screen}`);
+      if (screen === 'home') {
+        window.history.replaceState({ screen: 'exit' }, '', '#exit');
+        window.history.pushState({ screen: 'home' }, '', '#home');
+      } else {
+        window.history.pushState({ screen }, '', `#${screen}`);
+      }
     }
   }
   // Keep ref always pointing to latest goTo
@@ -194,13 +207,23 @@ export default function JobPilotApp() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Set initial state on mount if none exists
-    if (!window.history.state) {
-      window.history.replaceState({ screen: cur }, '', `#${cur}`);
-    }
-
     const handlePopState = (event) => {
       const targetScreen = event.state?.screen;
+
+      if (targetScreen === 'exit') {
+        const now = Date.now();
+        if (now - lastBackTimeRef.current < 2000) {
+          // Double press within 2s -> exit app
+          window.history.go(-2);
+        } else {
+          lastBackTimeRef.current = now;
+          showToast('Press back again to exit');
+          // Push screen back to restore history state
+          window.history.pushState({ screen: cur }, '', `#${cur}`);
+        }
+        return;
+      }
+
       if (targetScreen && targetScreen !== cur) {
         setAnimDir('back');
         setPrev(cur);
