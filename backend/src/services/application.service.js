@@ -36,8 +36,13 @@ async function createApplication(userId, jobId, resumeId, matchId, method = 'MAN
  * Update application status with validation
  */
 async function updateStatus(applicationId, userId, newStatus, extra = {}) {
+  const where = { id: applicationId };
+  if (userId !== 'system') {
+    where.user_id = userId;
+  }
   const application = await prisma.application.findFirst({
-    where: { id: applicationId, user_id: userId },
+    where,
+    include: { user: true, job: true }
   });
 
   if (!application) throw ApiError.notFound('Application not found');
@@ -55,6 +60,33 @@ async function updateStatus(applicationId, userId, newStatus, extra = {}) {
   });
 
   await logEvent(applicationId, `Status changed to ${newStatus}`, extra);
+
+  // Send email and push notification on applied response statuses
+  if (['INTERVIEW', 'OFFER', 'REJECTED'].includes(newStatus)) {
+    const actualUserId = application.user_id;
+    const user = application.user || await prisma.user.findUnique({ where: { id: actualUserId } });
+
+    if (user) {
+      // 1. Email notification
+      const notificationService = require('./notification.service');
+      notificationService.sendApplicationStatusUpdate(user.email, user.name, updated.job, newStatus, extra.notes || '').catch(err => {
+        logger.error('Failed to send status update email:', err.message);
+      });
+
+      // 2. Push notification
+      const pushService = require('./push.service');
+      if (newStatus === 'INTERVIEW') {
+        pushService.pushInterviewScheduled(actualUserId, updated.job).catch(err => {
+          logger.error('Failed to send interview push:', err.message);
+        });
+      } else if (newStatus === 'OFFER') {
+        pushService.pushOfferReceived(actualUserId, updated.job).catch(err => {
+          logger.error('Failed to send offer push:', err.message);
+        });
+      }
+    }
+  }
+
   return updated;
 }
 

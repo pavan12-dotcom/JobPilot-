@@ -35,7 +35,7 @@ const envSchema = z.object({
   SMTP_PORT: z.string().default('587').transform(Number),
   SMTP_USER: z.string().optional().default(''),
   SMTP_PASS: z.string().optional().default(''),
-  EMAIL_FROM: z.string().default('ApplyAI <noreply@applyai.dev>'),
+  EMAIL_FROM: z.string().default('JobPilot <noreply@jobpilot.dev>'),
 
   // JWT
   JWT_SECRET: z.string().default('dev-jwt-secret-change-in-production'),
@@ -46,6 +46,11 @@ const envSchema = z.object({
   // Bull Board
   BULL_BOARD_USERNAME: z.string().default('admin'),
   BULL_BOARD_PASSWORD: z.string().default('admin123'),
+
+  // Web Push (VAPID)
+  VAPID_PUBLIC_KEY: z.string().optional().default(''),
+  VAPID_PRIVATE_KEY: z.string().optional().default(''),
+  VAPID_EMAIL: z.string().default('mailto:support@jobpilot.dev'),
 });
 
 let env;

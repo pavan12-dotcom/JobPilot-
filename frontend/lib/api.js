@@ -103,4 +103,9 @@ export const dashboardApi = {
   insights: () => api.get('/dashboard/insights'),
 };
 
+export const notificationsApi = {
+  getVapidKey: () => api.get('/notifications/vapid-key'),
+  subscribe: (subscription) => api.post('/notifications/subscribe', subscription),
+};
+
 export default api;

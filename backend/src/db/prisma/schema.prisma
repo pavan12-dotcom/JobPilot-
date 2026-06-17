@@ -73,6 +73,7 @@ model User {
   job_matches     JobMatch[]
   applications    Application[]
   schedules       Schedule[]
+  push_subscriptions PushSubscription[]
 
   @@map("users")
 }
@@ -223,3 +224,18 @@ model Schedule {
 
   @@map("schedules")
 }
+
+model PushSubscription {
+  id         String   @id @default(uuid())
+  user_id    String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  created_at DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+

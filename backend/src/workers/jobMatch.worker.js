@@ -65,6 +65,14 @@ async function processJobMatch(job) {
 
   logger.info(`Match: ${jobRecord.title} → ${matchResult.match_score}/100 for ${user.email}`);
 
+  // Trigger push notification for high-scoring job match
+  if (matchResult.match_score >= prefs.min_match_score) {
+    const { pushNewJobMatch } = require('../services/push.service');
+    pushNewJobMatch(userId, jobRecord, matchResult.match_score).catch(err => {
+      logger.error(`Failed to send job match push: ${err.message}`);
+    });
+  }
+
   // Trigger auto-apply if threshold met
   if (
     prefs.auto_apply_enabled &&

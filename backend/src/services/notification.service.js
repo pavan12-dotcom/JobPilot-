@@ -127,10 +127,84 @@ async function sendDailyDigest(email, name, stats) {
   );
 }
 
+async function sendApplicationStatusUpdate(email, name, job, status, notes = '') {
+  let statusText = '';
+  let statusColor = '';
+  let emoji = '';
+  let extraMessage = '';
+
+  if (status === 'INTERVIEW') {
+    statusText = 'Interview Scheduled';
+    statusColor = '#B8F023';
+    emoji = '📅';
+    extraMessage = 'Great news! The company has scheduled an interview with you. Prepare your resume and check your dashboard for details.';
+  } else if (status === 'OFFER') {
+    statusText = 'Job Offer Received';
+    statusColor = '#B8F023';
+    emoji = '🎉';
+    extraMessage = 'Congratulations! You have received a job offer! This is a huge milestone. View the offer details on your dashboard.';
+  } else if (status === 'REJECTED') {
+    statusText = 'Application Rejected';
+    statusColor = '#F87171';
+    emoji = '✉️';
+    extraMessage = "We're sorry, but the application was not selected. Don't worry, your search continues and we'll keep matching you with opportunities.";
+  } else {
+    return;
+  }
+
+  const customBaseStyle = `
+    font-family: Inter, -apple-system, sans-serif;
+    background: #0D150D; color: #F0F5E8;
+    padding: 32px; border-radius: 16px; max-width: 600px; margin: 0 auto;
+    border: 1px solid rgba(184,240,35,0.15);
+  `;
+
+  const customBtnStyle = `
+    display: inline-block; background: #B8F023; color: #0D150D;
+    padding: 12px 28px; border-radius: 999px; text-decoration: none;
+    font-weight: 800; margin-top: 16px; box-shadow: 0 4px 12px rgba(184,240,35,0.2);
+  `;
+
+  await sendEmail(
+    email,
+    `${emoji} Update: ${statusText} for ${job.title} at ${job.company}`,
+    `<div style="${customBaseStyle}">
+      <h2 style="color:${statusColor}; margin-top: 0; display: flex; align-items: center; gap: 8px;">
+        <span>${emoji}</span> ${statusText}
+      </h2>
+      <p style="color:#8BA882; font-size:14px;">Hi ${name},</p>
+      <p style="font-size: 15px; line-height: 1.6;">There is a new update regarding your application for <strong style="color: #F0F5E8;">${job.title}</strong> at <strong style="color: #F0F5E8;">${job.company}</strong>:</p>
+      
+      <div style="background:rgba(184,240,35,0.06); padding:20px; border-radius:12px; margin: 24px 0; border: 1px solid ${statusColor}40;">
+        <div style="font-size:12px; font-weight:700; color:#8BA882; text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">Current Status</div>
+        <div style="font-size:18px; font-weight:800; color:${statusColor};">${statusText}</div>
+        ${notes ? `
+          <div style="margin-top:14px; padding-top:12px; border-top:1px solid rgba(184,240,35,0.1); font-size:13px; color:#F0F5E8; line-height:1.5;">
+            <strong style="color:#8BA882; display:block; margin-bottom:4px; font-size:11px; text-transform:uppercase;">Notes:</strong>
+            "${notes}"
+          </div>
+        ` : ''}
+      </div>
+
+      <p style="font-size: 14px; color: #8BA882; line-height: 1.6; margin-bottom: 24px;">${extraMessage}</p>
+      
+      <div style="text-align: center;">
+        <a href="${env.FRONTEND_URL}/dashboard/applications" style="${customBtnStyle}">View Application Details →</a>
+      </div>
+      
+      <p style="font-size: 11px; color: #556B52; text-align: center; margin-top: 32px; border-top: 1px solid rgba(184,240,35,0.1); padding-top: 16px;">
+        Sent automatically by JobPilot. You can manage notification preferences in your profile settings.
+      </p>
+    </div>`,
+  );
+}
+
 module.exports = {
   sendResumeParsed,
   sendNewMatches,
   sendApplied,
   sendCaptchaAlert,
   sendDailyDigest,
+  sendApplicationStatusUpdate,
 };
+

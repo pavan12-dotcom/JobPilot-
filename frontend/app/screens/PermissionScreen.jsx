@@ -1,5 +1,23 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { notificationsApi } from '../../lib/api';
+
+// Utility helper to convert base64 VAPID key to Uint8Array
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 
 // ── Permission definitions ────────────────────────────────────────────────────
 const PERMS = [
@@ -104,6 +122,34 @@ export default function PermissionScreen({ goTo, showToast }) {
         if (result === 'granted') {
           try {
             const reg = await navigator.serviceWorker.ready;
+            
+            // Try to subscribe to push notification service on backend
+            try {
+              const keyRes = await notificationsApi.getVapidKey();
+              const vapidKey = keyRes.data?.vapidKey;
+              
+              if (vapidKey) {
+                const sub = await reg.pushManager.subscribe({
+                  userVisibleOnly: true,
+                  applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+                
+                const subJson = sub.toJSON();
+                if (subJson.endpoint && subJson.keys?.p256dh && subJson.keys?.auth) {
+                  await notificationsApi.subscribe({
+                    endpoint: subJson.endpoint,
+                    keys: {
+                      p256dh: subJson.keys.p256dh,
+                      auth: subJson.keys.auth
+                    }
+                  });
+                  console.log('Successfully subscribed to Web Push');
+                }
+              }
+            } catch (pushErr) {
+              console.error('Failed to subscribe to Web Push backend:', pushErr);
+            }
+
             await reg.showNotification('JobPilot 🎉', {
               body: 'Notifications are on! We\'ll alert you for new matches and interviews.',
               icon: '/icons/icon-192x192.png',
