@@ -18,11 +18,61 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
   const title = job.title || 'Product Designer';
   const company = job.company || 'Google';
   const location = job.location || 'Mountain View, CA';
-  const salary = job.salary_min ? `₹${(job.salary_min / 100000).toFixed(0)}L – ₹${((job.salary_max || job.salary_min * 1.3) / 100000).toFixed(0)}L/yr` : '$140k/yr';
   const jobType = job.job_type?.replace('_', '-') || 'Remote';
-  const description = job.description || "Join an amazing Product Design team and help shape experiences for millions of users. Partner with engineering, research, and PMs to define, design, and ship high-quality interfaces.";
-  const skills = reasons.skills_matched || ['Figma', 'Prototyping', 'User research', 'Design systems', 'Accessibility'];
-  const skillsMissing = reasons.skills_missing || ['Motion design', 'Swift/SwiftUI'];
+  const description = job.description || "Join an amazing team and help shape experiences for millions of users. Partner with engineering, research, and PMs to define and ship high-quality features.";
+  
+  const skills = reasons.skills_matched || (title.toLowerCase().includes('data') 
+    ? ['SQL', 'Python', 'Excel', 'Tableau', 'Data analysis'] 
+    : ['Figma', 'Prototyping', 'User research', 'Design systems']);
+    
+  const skillsMissing = reasons.skills_missing || (title.toLowerCase().includes('data')
+    ? ['ETL', 'AWS Redshift']
+    : ['Motion design', 'Swift/SwiftUI']);
+
+  // Dynamic salary formatting helper
+  const formatSalary = (min, max) => {
+    if (!min) return '$140k/yr';
+    if (min < 100000) {
+      const formattedMin = min >= 1000 ? `${(min/1000).toFixed(0)}k` : min;
+      const formattedMax = max ? (max >= 1000 ? `${(max/1000).toFixed(0)}k` : max) : null;
+      return formattedMax ? `$${formattedMin} – $${formattedMax}/yr` : `$${formattedMin}/yr`;
+    }
+    const minLakh = (min / 100000).toFixed(1).replace('.0', '');
+    const maxLakh = max ? (max / 100000).toFixed(1).replace('.0', '') : (min * 1.3 / 100000).toFixed(1).replace('.0', '');
+    return `₹${minLakh}L – ₹${maxLakh}L/yr`;
+  };
+
+  const formatSalarySimple = (min) => {
+    if (!min) return '$140k';
+    if (min < 100000) {
+      return min >= 1000 ? `$${(min/1000).toFixed(0)}k` : `$${min}`;
+    }
+    return `₹${(min / 100000).toFixed(1).replace('.0', '')}L`;
+  };
+
+  const salary = formatSalary(job.salary_min, job.salary_max);
+  const salarySimple = formatSalarySimple(job.salary_min);
+
+  // Dynamic responsibilities based on job title
+  const getResponsibilities = () => {
+    const titleLower = title.toLowerCase();
+    if (titleLower.includes('data') || titleLower.includes('analyst') || titleLower.includes('analytics')) {
+      return [
+        { icon: 'ti-chart-bar', text: 'Analyze raw datasets to extract actionable business insights' },
+        { icon: 'ti-database', text: 'Design, write, and optimize SQL dashboard reports' },
+        { icon: 'ti-presentation', text: 'Present key metrics and analysis to product teams' },
+        { icon: 'ti-filter', text: 'Perform data cleaning and pipeline ETL operations' },
+      ];
+    }
+    return [
+      { icon: 'ti-pencil', text: 'Own end-to-end design or development for key product features' },
+      { icon: 'ti-users', text: 'Collaborate with product, engineering, and business teams' },
+      { icon: 'ti-chart-bar', text: 'Analyse data and feedback to inform feature iterations' },
+      { icon: 'ti-tool', text: 'Maintain quality standards and documentation at scale' },
+    ];
+  };
+
+  const responsibilities = getResponsibilities();
 
   async function handleApply() {
     setApplying(true);
@@ -75,7 +125,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
         </div>
 
         <div className="det-stats">
-          <div className="dsi"><div className="dsv">{job.salary_min ? `₹${(job.salary_min / 100000).toFixed(0)}L` : '$140k'}</div><div className="dsl">Salary</div></div>
+          <div className="dsi"><div className="dsv">{salarySimple}</div><div className="dsl">Salary</div></div>
           <div className="dsi"><div className="dsv">{jobType}</div><div className="dsl">Work type</div></div>
           <div className="dsi"><div className="dsv">{job.experience_level || 'Senior'}</div><div className="dsl">Level</div></div>
           <div className="dsi"><div className="dsv">{job.source || 'Adzuna'}</div><div className="dsl">Source</div></div>
@@ -94,12 +144,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
             <div>
               <p className="about-txt">{description}</p>
               <div className="ds-title">What you'll do</div>
-              {[
-                { icon: 'ti-pencil', text: 'Own end-to-end design for key product surfaces' },
-                { icon: 'ti-users', text: 'Lead design sprints and user research sessions' },
-                { icon: 'ti-chart-bar', text: 'Analyse data to inform design decisions' },
-                { icon: 'ti-tool', text: 'Evolve the design system at scale' },
-              ].map(({ icon, text }) => (
+              {responsibilities.map(({ icon, text }) => (
                 <div key={text} className="ben-row">
                   <div className="ben-ico"><i className={`ti ${icon}`} /></div>
                   <div className="ben-txt">{text}</div>
@@ -141,8 +186,8 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   <p className="about-txt" style={{ fontStyle: 'italic' }}>"{reasons.summary}"</p>
                 </>
               )}
-              <div className="ds-title" style={{ marginTop: 14 }}>Experience required</div>
-              <p className="about-txt">5+ years of product design experience, preferably at a consumer tech company. Portfolio showing your process and shipped work is required.</p>
+              <div className="ds-title" style={{ marginTop: 14 }}>Qualifications & Requirements</div>
+              <p className="about-txt">{job.requirements || "A degree in computer science, statistics, or related field with strong problem-solving skills and experience matching the job description."}</p>
               <div className="sp" />
             </div>
           )}
@@ -175,7 +220,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
       {/* Apply bar */}
       <div className="apply-bar">
         <div className="sal-disp">
-          <div className="sal-amt">{job.salary_min ? `₹${(job.salary_min / 100000).toFixed(0)}L` : '$140k'}</div>
+          <div className="sal-amt">{salarySimple}</div>
           <div className="sal-per">per year</div>
         </div>
         <button
