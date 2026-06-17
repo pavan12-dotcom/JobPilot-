@@ -12,7 +12,7 @@ const JOBS_DATA = [
     job_type: 'FULL_TIME',
     salary_min: 20000,
     salary_max: 22000,
-    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst%20Google&location=Bangalore%2C%20India',
+    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Google%20Data%20Analyst&location=India',
     description: 'Analyze user behavior data across search and maps, design SQL dashboard reports, and identify growth opportunities using quantitative analysis.',
     requirements: 'Strong SQL skills, experience with Python or R, experience with Tableau or Google Data Studio, 2+ years experience in data analytics.'
   },
@@ -25,7 +25,7 @@ const JOBS_DATA = [
     job_type: 'FULL_TIME',
     salary_min: 21000,
     salary_max: 24000,
-    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst%20Amazon&location=Hyderabad%2C%20India',
+    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Amazon%20Data%20Analyst&location=India',
     description: 'Translate complex datasets into actionable business insights. Build and maintain automated reports, query Redshift databases, and support operations teams.',
     requirements: 'Advanced SQL, Python scripting, Excel modeling, experience with AWS Redshift, 3+ years experience.'
   },
@@ -38,7 +38,7 @@ const JOBS_DATA = [
     job_type: 'FULL_TIME',
     salary_min: 18000,
     salary_max: 20000,
-    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst%20TCS&location=Chennai%2C%20India',
+    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=TCS%20Data&location=India',
     description: 'Clean raw customer transactional data using Python Pandas, run weekly analytical queries, and document business report presentations.',
     requirements: 'SQL queries, basic Python, Excel spreadsheets, analytical mindset, freshers or 1 year experience welcome.'
   },
@@ -51,7 +51,7 @@ const JOBS_DATA = [
     job_type: 'REMOTE',
     salary_min: 20000,
     salary_max: 25000,
-    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst%20Flipkart&location=India',
+    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Flipkart%20Data&location=India',
     description: 'Design and analyze A/B testing models for customer search algorithms, monitor conversion rates, and build cross-functional reporting tools.',
     requirements: 'Python/R statistical programming, advanced SQL, product analytics experience, strong communication.'
   },
@@ -64,7 +64,7 @@ const JOBS_DATA = [
     job_type: 'FULL_TIME',
     salary_min: 19000,
     salary_max: 21000,
-    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Data%20Analyst%20Infosys&location=Pune%2C%20India',
+    apply_url: 'https://www.linkedin.com/jobs/search/?keywords=Infosys%20Data&location=India',
     description: 'Build robust ET data pipelines, support dashboard reporting tools, clean raw databases, and optimize query latency for client projects.',
     requirements: 'ETL pipelines, SQL database management, Python, Tableau or PowerBI dashboards.'
   }
