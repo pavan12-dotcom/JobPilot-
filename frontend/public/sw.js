@@ -1,5 +1,5 @@
 // frontend/public/sw.js
-const CACHE_NAME = 'jobpilot-cache-v4';
+const CACHE_NAME = 'jobpilot-cache-v5';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
