@@ -4,6 +4,20 @@ import { jobsApi } from '@/lib/api';
 
 const TABS = ['About', 'Requirements', 'ATS Report', 'Company'];
 
+const getRoleType = (titleText) => {
+  const lower = (titleText || '').toLowerCase();
+  const dataKeywords = ['data', 'analyst', 'analytics', 'science', 'scientist', 'intelligence', 'ai'];
+  const softwareKeywords = ['engineer', 'developer', 'software', 'backend', 'frontend', 'full stack', 'reliability', 'devops', 'builder', 'tech', 'programmer', 'sde', 'coder'];
+
+  if (dataKeywords.some(kw => lower.includes(kw))) {
+    return 'data';
+  }
+  if (softwareKeywords.some(kw => lower.includes(kw))) {
+    return 'software';
+  }
+  return 'design'; // fallback
+};
+
 export default function DetailScreen({ back, showToast, selectedJob }) {
   const [activeTab, setActiveTab] = useState('About');
   const [applying, setApplying] = useState(false);
@@ -16,16 +30,25 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
   const reasons = match.match_reasons || {};
   const score = match.match_score || 75;
 
+  const title = job.title || 'Product Designer';
+  const roleType = getRoleType(title);
+
   const ats = reasons.ats_breakdown || {
     keyword_match: score ? Math.round(score * 0.95) : 78,
     skills_alignment: score ? Math.round(score * 0.9) : 74,
     formatting_score: 85,
     experience_score: score ? Math.round(score * 0.88) : 80,
-    resume_optimization_tips: (job.title || '').toLowerCase().includes('data') || (job.title || '').toLowerCase().includes('analyst')
+    resume_optimization_tips: roleType === 'data'
       ? [
           "Optimize resume to explicitly mention ETL pipelines and database query dashboard architectures.",
           "Add quantitative metrics (e.g. 'Optimized SQL queries reducing analytics latency by 25%').",
           "Ensure SQL, Python, and Tableau are highlighted directly in your top core skills block."
+        ]
+      : roleType === 'software'
+      ? [
+          "Highlight core backend/frontend frameworks (e.g. React, Node.js, Express, Go) and system design patterns.",
+          "Quantify impact on performance (e.g. 'Reduced API response times by 30% through caching and query optimization').",
+          "Emphasize database management, CI/CD pipeline integration, and cloud infrastructure experience."
         ]
       : [
           "Include design systems experience and design token workflows directly in your bullet points.",
@@ -34,18 +57,21 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
         ]
   };
 
-  const title = job.title || 'Product Designer';
   const company = job.company || 'Google';
   const location = job.location || 'Mountain View, CA';
   const jobType = job.job_type?.replace('_', '-') || 'Remote';
   const description = job.description || "Join an amazing team and help shape experiences for millions of users. Partner with engineering, research, and PMs to define and ship high-quality features.";
   
-  const skills = reasons.skills_matched || (title.toLowerCase().includes('data') 
+  const skills = reasons.skills_matched || (roleType === 'data'
     ? ['SQL', 'Python', 'Excel', 'Tableau', 'Data analysis'] 
+    : roleType === 'software'
+    ? ['JavaScript', 'Node.js', 'React', 'Git', 'REST APIs']
     : ['Figma', 'Prototyping', 'User research', 'Design systems']);
     
-  const skillsMissing = reasons.skills_missing || (title.toLowerCase().includes('data')
+  const skillsMissing = reasons.skills_missing || (roleType === 'data'
     ? ['ETL', 'AWS Redshift']
+    : roleType === 'software'
+    ? ['Docker', 'CI/CD']
     : ['Motion design', 'Swift/SwiftUI']);
 
   // Dynamic salary formatting helper
@@ -74,8 +100,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
 
   // Dynamic responsibilities based on job title
   const getResponsibilities = () => {
-    const titleLower = title.toLowerCase();
-    if (titleLower.includes('data') || titleLower.includes('analyst') || titleLower.includes('analytics')) {
+    if (roleType === 'data') {
       return [
         { icon: 'ti-chart-bar', text: 'Analyze raw datasets to extract actionable business insights' },
         { icon: 'ti-database', text: 'Design, write, and optimize SQL dashboard reports' },
@@ -83,11 +108,19 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
         { icon: 'ti-filter', text: 'Perform data cleaning and pipeline ETL operations' },
       ];
     }
+    if (roleType === 'software') {
+      return [
+        { icon: 'ti-code', text: 'Design, write, and maintain clean, testable, and efficient code' },
+        { icon: 'ti-git-branch', text: 'Participate in code reviews, technical designs, and architecture decisions' },
+        { icon: 'ti-settings', text: 'Build, maintain, and optimize robust APIs and server-side components' },
+        { icon: 'ti-server', text: 'Deploy and orchestrate applications using cloud platforms and CI/CD pipelines' },
+      ];
+    }
     return [
-      { icon: 'ti-pencil', text: 'Own end-to-end design or development for key product features' },
-      { icon: 'ti-users', text: 'Collaborate with product, engineering, and business teams' },
-      { icon: 'ti-chart-bar', text: 'Analyse data and feedback to inform feature iterations' },
-      { icon: 'ti-tool', text: 'Maintain quality standards and documentation at scale' },
+      { icon: 'ti-pencil', text: 'Create high-fidelity mockups, wireframes, and interactive prototypes' },
+      { icon: 'ti-users', text: 'Conduct user research sessions and translate insights into designs' },
+      { icon: 'ti-palette', text: 'Define and maintain the brand design system and design tokens' },
+      { icon: 'ti-arrows-split-2', text: 'Collaborate with PMs and engineers to build modern interfaces' },
     ];
   };
 
