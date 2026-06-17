@@ -7,9 +7,15 @@ const env = require('../config/env');
 const logger = require('../utils/logger');
 const ApiError = require('../utils/ApiError');
 
+const WebSocket = require('ws');
+
 function getSupabaseAdmin() {
   if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_KEY) return null;
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
+  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY, {
+    realtime: {
+      transport: WebSocket,
+    },
+  });
 }
 
 /**

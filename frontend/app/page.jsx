@@ -38,6 +38,9 @@ export default function JobPilotApp() {
       if (params.get('code') || window.location.hash.includes('access_token')) {
         setAuthLoading(true);
       }
+      if (params.get('auth_error') === 'true') {
+        showToast('Google Sign-In failed. Check Supabase/Google configuration.');
+      }
     }
   }, []);
 
