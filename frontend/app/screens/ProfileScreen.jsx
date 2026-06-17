@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi, resumeApi, preferencesApi } from '@/lib/api';
 
-export default function ProfileScreen({ goTo, user, showToast, setUser }) {
+export default function ProfileScreen({ goTo, user, showToast, setUser, back }) {
   const [stats, setStats] = useState(null);
   const [resume, setResume] = useState(null);
   const [prefs, setPrefs] = useState(null);
@@ -51,13 +51,18 @@ export default function ProfileScreen({ goTo, user, showToast, setUser }) {
     { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@applyai.dev') },
   ];
 
-
-
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
       {/* Hero section */}
       <div className="prof-hero">
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10 }}>
+          {back ? (
+            <button className="bk-btn" onClick={back} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="ti ti-arrow-left" style={{ fontSize: 18, color: 'var(--text1)' }} />
+            </button>
+          ) : (
+            <div style={{ width: 36 }} />
+          )}
           <div className="ibtn"><i className="ti ti-settings" /></div>
         </div>
         <div className="prof-ava">{initials}</div>

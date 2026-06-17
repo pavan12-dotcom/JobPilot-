@@ -6,7 +6,7 @@ const STEPS = ['Resume', 'Preferences', 'Auto-Apply', 'Ready'];
 
 const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Remote', 'Hybrid'];
 
-export default function OnboardingScreen({ goTo, showToast }) {
+export default function OnboardingScreen({ goTo, showToast, back }) {
   const [step, setStep] = useState(1);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,8 +80,21 @@ export default function OnboardingScreen({ goTo, showToast }) {
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      {/* Topbar with back button */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px 0', flexShrink: 0 }}>
+        {back ? (
+          <button className="bk-btn" onClick={back} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ti ti-arrow-left" style={{ fontSize: 18, color: 'var(--text1)' }} />
+          </button>
+        ) : (
+          <div style={{ width: 36 }} />
+        )}
+        <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text1)' }}>Onboarding</span>
+        <div style={{ width: 36 }} />
+      </div>
+
       {/* Progress bar */}
-      <div style={{ padding: '14px 20px 0' }}>
+      <div style={{ padding: '10px 20px 0' }}>
         <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
           {STEPS.map((s, i) => (
             <div key={s} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>

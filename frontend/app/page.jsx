@@ -135,6 +135,16 @@ export default function JobPilotApp() {
   // Keep ref always pointing to latest goTo
   goToRef.current = goTo;
 
+  // Clear prev screen after transition animation completes to prevent overlapping
+  useEffect(() => {
+    if (cur) {
+      const timer = setTimeout(() => {
+        setPrev(null);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [cur]);
+
 
   function back() {
     if (hist.current.length <= 1) return;
@@ -156,12 +166,12 @@ export default function JobPilotApp() {
   const SCREENS = {
     splash: <SplashScreen goTo={goTo} />,
     login: <LoginScreen goTo={goTo} setUser={setUser} />,
-    onboarding: <OnboardingScreen goTo={goTo} showToast={showToast} />,
+    onboarding: <OnboardingScreen goTo={goTo} showToast={showToast} back={back} />,
     home: <HomeScreen goTo={goTo} user={user} showToast={showToast} setSelectedJob={setSelectedJob} />,
     search: <ExploreScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} />,
-    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} />,
+    profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} back={back} />,
     notifications: <NotificationsScreen back={back} />,
   };
 
@@ -193,9 +203,9 @@ export default function JobPilotApp() {
           background:var(--bg);display:flex;flex-direction:column;scrollbar-width:none;
           transition:transform 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.32s ease}
         .screen::-webkit-scrollbar{display:none}
-        .screen.inactive{transform:translateX(100%);pointer-events:none}
-        .screen.out{transform:translateX(-28%);pointer-events:none}
-        .screen.active{transform:translateX(0);opacity:1}
+        .screen.inactive{transform:translateX(100%);pointer-events:none;z-index:1}
+        .screen.out{transform:translateX(-28%);pointer-events:none;z-index:1}
+        .screen.active{transform:translateX(0);opacity:1;z-index:10}
         .bnav{background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 20px;
           display:flex;justify-content:space-around;flex-shrink:0;z-index:20}
         .nbtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
