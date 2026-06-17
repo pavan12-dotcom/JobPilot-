@@ -35,7 +35,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#0D150D',
+  themeColor: '#050A1A',
 };
 
 export default function RootLayout({ children }) {
@@ -60,16 +60,16 @@ export default function RootLayout({ children }) {
 
         {/* PWA — Android / Chrome */}
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#0D150D" />
+        <meta name="theme-color" content="#050A1A" />
 
         {/* PWA — Microsoft Tile */}
-        <meta name="msapplication-TileColor" content="#0D150D" />
+        <meta name="msapplication-TileColor" content="#050A1A" />
         <meta name="msapplication-TileImage" content="/icons/icon-192x192.png" />
 
         {/* Disable automatic phone number linking */}
         <meta name="format-detection" content="telephone=no" />
       </head>
-      <body style={{ background: '#0D150D', margin: 0, padding: 0, minHeight: '100vh', minHeight: '100dvh' }}>
+      <body style={{ background: '#050A1A', margin: 0, padding: 0, minHeight: '100vh', minHeight: '100dvh' }}>
         {children}
       </body>
     </html>

@@ -293,23 +293,23 @@ export default function JobPilotApp() {
   const styleTag = (
     <style dangerouslySetInnerHTML={{ __html: `
         :root {
-          --bg:#141F14;--bg2:#1C2B1C;--bg3:#243024;--bg4:#2C3A2C;
-          --card:rgba(28,43,28,0.95);--card2:rgba(36,48,36,0.9);
-          --lime:#B8F023;--lime2:#CEFF4A;
-          --lime-dim:rgba(184,240,35,0.12);--lime-mid:rgba(184,240,35,0.22);
-          --text1:#F0F5E8;--text2:#8BA882;--text3:#556B52;
-          --border:rgba(184,240,35,0.10);--border2:rgba(184,240,35,0.20);
+          --bg:#0A1128;--bg2:#101F42;--bg3:#1B2E5C;--bg4:#253D74;
+          --card:rgba(16,31,66,0.95);--card2:rgba(27,46,92,0.9);
+          --lime:#00E5FF;--lime2:#33ECFF;
+          --lime-dim:rgba(0, 229, 255, 0.12);--lime-mid:rgba(0, 229, 255, 0.22);
+          --text1:#F1F5F9;--text2:#94A3B8;--text3:#475569;
+          --border:rgba(0, 229, 255, 0.10);--border2:rgba(0, 229, 255, 0.20);
           --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;--radius-full:999px;
           --tr:0.22s cubic-bezier(0.4,0,0.2,1);
         }
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-        html,body{height:100%;background:#0D150D}
+        html,body{height:100%;background:#050A1A}
         body{font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;padding:0}
         .phone{width:100%;max-width:430px;height:100vh;height:100dvh;background:var(--bg);border-radius:0;overflow:hidden;
           position:relative;display:flex;flex-direction:column;user-select:none;
           padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
           padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-        @media(min-width:480px){.phone{border-radius:46px;height:844px;box-shadow:0 0 0 1px rgba(184,240,35,0.08),0 24px 80px rgba(0,0,0,0.7),0 0 60px rgba(184,240,35,0.04);padding-top:0;padding-bottom:0}}
+        @media(min-width:480px){.phone{border-radius:46px;height:844px;box-shadow:0 0 0 1px rgba(0, 229, 255, 0.08),0 24px 80px rgba(0,0,0,0.7),0 0 60px rgba(0, 229, 255, 0.04);padding-top:0;padding-bottom:0}}
         @media(min-width:480px){body{padding:20px}}
         .status-bar{padding:14px 24px 6px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--bg);z-index:20}
         .status-bar .time{font-size:15px;font-weight:700;color:var(--text1)}
@@ -344,14 +344,14 @@ export default function JobPilotApp() {
         .ibtn i{font-size:18px;color:var(--lime)}
         .ava{width:36px;height:36px;border-radius:50%;background:var(--lime);color:var(--bg);
           font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;
-          cursor:pointer;border:2px solid rgba(184,240,35,0.3)}
+          cursor:pointer;border:2px solid rgba(0, 229, 255, 0.3)}
         .splash{background:var(--bg);display:flex;flex-direction:column;justify-content:center;
           align-items:center;padding:40px 32px;text-align:center;min-height:100%}
         .splash-ring{width:180px;height:180px;border-radius:50%;border:1px solid var(--border2);
           display:flex;align-items:center;justify-content:center;margin-bottom:32px;
           background:var(--lime-dim);position:relative}
         .splash-ring::before{content:'';position:absolute;width:220px;height:220px;border-radius:50%;
-          border:1px solid rgba(184,240,35,0.06);pointer-events:none}
+          border:1px solid rgba(0, 229, 255, 0.06);pointer-events:none}
         .splash-ring .inner{width:120px;height:120px;border-radius:50%;background:var(--lime-mid);
           display:flex;align-items:center;justify-content:center}
         .splash-ring i{font-size:52px;color:var(--lime)}
@@ -574,7 +574,7 @@ export default function JobPilotApp() {
 
   if (!mounted) {
     return (
-      <div style={{ background: '#0D150D', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#050A1A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <i className="ti ti-loader" style={{ fontSize: 32, color: 'var(--lime)', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -584,11 +584,11 @@ export default function JobPilotApp() {
   // Show full-screen loader while processing OAuth redirect
   if (authLoading) {
     return (
-      <div style={{ background: '#0D150D', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <div style={{ width: 56, height: 56, background: 'rgba(184,240,35,0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <i className="ti ti-loader" style={{ fontSize: 28, color: '#B8F023', animation: 'spin 1s linear infinite' }} />
+      <div style={{ background: '#050A1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{ width: 56, height: 56, background: 'rgba(0, 229, 255, 0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <i className="ti ti-loader" style={{ fontSize: 28, color: '#00E5FF', animation: 'spin 1s linear infinite' }} />
         </div>
-        <div style={{ color: '#8BA882', fontSize: 14, fontWeight: 500 }}>Signing you in…</div>
+        <div style={{ color: '#94A3B8', fontSize: 14, fontWeight: 500 }}>Signing you in…</div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );

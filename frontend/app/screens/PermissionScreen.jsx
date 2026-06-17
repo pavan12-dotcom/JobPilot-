@@ -24,10 +24,10 @@ const PERMS = [
   {
     id: 'notifications',
     icon: 'ti-bell-ringing',
-    gradient: 'linear-gradient(135deg, rgba(184,240,35,0.15) 0%, rgba(184,240,35,0.04) 100%)',
-    iconBg: 'rgba(184,240,35,0.15)',
-    iconColor: '#B8F023',
-    glowColor: 'rgba(184,240,35,0.2)',
+    gradient: 'linear-gradient(135deg, rgba(0,229,255,0.15) 0%, rgba(0,229,255,0.04) 100%)',
+    iconBg: 'rgba(0,229,255,0.15)',
+    iconColor: '#00E5FF',
+    glowColor: 'rgba(0,229,255,0.2)',
     title: 'Stay in the Loop',
     subtitle: 'Notifications',
     desc: 'Get instant alerts when you land a new job match, interview invite, or when auto-apply succeeds.',
@@ -218,20 +218,20 @@ export default function PermissionScreen({ goTo, showToast }) {
   if (done) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 28px', textAlign: 'center' }}>
-        <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(184,240,35,0.1)', border: '1px solid rgba(184,240,35,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-          <i className="ti ti-shield-check" style={{ fontSize: 42, color: '#B8F023' }} />
+        <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+          <i className="ti ti-shield-check" style={{ fontSize: 42, color: '#00E5FF' }} />
         </div>
 
-        <div style={{ fontSize: 24, fontWeight: 800, color: '#F0F5E8', marginBottom: 8, lineHeight: 1.2 }}>
-          All set! <em style={{ color: '#B8F023', fontStyle: 'normal' }}>Let's go.</em>
+        <div style={{ fontSize: 24, fontWeight: 800, color: '#F1F5F9', marginBottom: 8, lineHeight: 1.2 }}>
+          All set! <em style={{ color: '#00E5FF', fontStyle: 'normal' }}>Let's go.</em>
         </div>
-        <div style={{ fontSize: 13, color: '#8BA882', lineHeight: 1.6, marginBottom: 28 }}>
+        <div style={{ fontSize: 13, color: '#94A3B8', lineHeight: 1.6, marginBottom: 28 }}>
           You can change any permission anytime from Profile → Notification Settings.
         </div>
 
         {/* Summary grid */}
-        <div style={{ width: '100%', background: 'rgba(28,43,28,0.95)', border: '1px solid rgba(184,240,35,0.1)', borderRadius: 16, padding: '16px', marginBottom: 28 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#556B52', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>Permission Summary</div>
+        <div style={{ width: '100%', background: 'rgba(16,31,66,0.95)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: 16, padding: '16px', marginBottom: 28 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14 }}>Permission Summary</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {PERMS.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -239,7 +239,7 @@ export default function PermissionScreen({ goTo, showToast }) {
                   <i className={`ti ${p.icon}`} style={{ fontSize: 15, color: p.iconColor }} />
                 </div>
                 <div style={{ flex: 1, textAlign: 'left' }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#F0F5E8' }}>{p.subtitle}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#F1F5F9' }}>{p.subtitle}</div>
                 </div>
                 <StatusBadge status={statuses[p.id] || 'skipped'} />
               </div>
@@ -249,7 +249,7 @@ export default function PermissionScreen({ goTo, showToast }) {
 
         <button
           onClick={finish}
-          style={{ width: '100%', background: '#B8F023', color: '#0D150D', border: 'none', padding: '15px', borderRadius: 999, fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
+          style={{ width: '100%', background: '#00E5FF', color: '#050A1A', border: 'none', padding: '15px', borderRadius: 999, fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
         >
           Start finding jobs →
         </button>
@@ -307,7 +307,7 @@ export default function PermissionScreen({ goTo, showToast }) {
       </div>
 
       {/* Why we need this */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(184,240,35,0.05)', border: '1px solid rgba(184,240,35,0.1)', borderRadius: 10, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.1)', borderRadius: 10, marginBottom: 16 }}>
         <i className="ti ti-lock" style={{ fontSize: 13, color: 'var(--lime)', flexShrink: 0 }} />
         <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.4 }}>
           <strong style={{ color: 'var(--text1)' }}>Why we need this: </strong>{perm.why}
@@ -329,7 +329,7 @@ export default function PermissionScreen({ goTo, showToast }) {
         <button
           onClick={handleAllow}
           disabled={asking}
-          style={{ width: '100%', background: perm.iconColor, color: '#0D150D', border: 'none', padding: '15px', borderRadius: 999, fontSize: 14, fontWeight: 800, cursor: asking ? 'wait' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: asking ? 0.75 : 1, transition: 'all 0.2s' }}
+          style={{ width: '100%', background: perm.iconColor, color: '#050A1A', border: 'none', padding: '15px', borderRadius: 999, fontSize: 14, fontWeight: 800, cursor: asking ? 'wait' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: asking ? 0.75 : 1, transition: 'all 0.2s' }}
         >
           {asking
             ? <><i className="ti ti-loader" style={{ fontSize: 16, animation: 'spin 1s linear infinite' }} /> Requesting…</>

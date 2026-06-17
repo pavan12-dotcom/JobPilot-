@@ -6,41 +6,41 @@
 
 /* ── JobPilot Design System Tokens ─────────────────────────────── */
 :root {
-  --bg:           #141F14;          /* Medium dark forest green */
-  --bg2:          #1C2B1C;          /* Lighter medium green */
-  --bg3:          #243024;
-  --bg4:          #2C3A2C;
-  --card:         rgba(28, 43, 28, 0.95);
-  --card2:        rgba(36, 48, 36, 0.9);
+  --bg:           #0A1128;          /* Midnight navy blue */
+  --bg2:          #101F42;          /* Lighter navy container background */
+  --bg3:          #1B2E5C;          /* Mid-tone navy accents */
+  --bg4:          #253D74;          /* Highlighted/active navy background */
+  --card:         rgba(16, 31, 66, 0.95);
+  --card2:        rgba(27, 46, 92, 0.9);
   
-  --lime:         #B8F023;          /* Vibrant Lime Accent */
-  --lime2:        #CEFF4A;
-  --lime-dim:     rgba(184, 240, 35, 0.12);
-  --lime-mid:     rgba(184, 240, 35, 0.22);
+  --lime:         #00E5FF;          /* Electric Cyan Accent */
+  --lime2:        #33ECFF;          /* Brighter active Cyan */
+  --lime-dim:     rgba(0, 229, 255, 0.12);
+  --lime-mid:     rgba(0, 229, 255, 0.22);
   
-  --text1:        #F0F5E8;          /* Bright mint off-white */
-  --text2:        #8BA882;          /* Muted Sage */
-  --text3:        #556B52;          /* Dark Sage */
+  --text1:        #F1F5F9;          /* Crisp cool white */
+  --text2:        #94A3B8;          /* Cool Slate description text */
+  --text3:        #475569;          /* Dark Slate label/border text */
   
-  --border:       rgba(184, 240, 35, 0.10);  /* Soft lime border */
-  --border2:      rgba(184, 240, 35, 0.20);
+  --border:       rgba(0, 229, 255, 0.10);  /* Soft cyan border */
+  --border2:      rgba(0, 229, 255, 0.20);
   
   /* Tailwind standard overrides */
-  --primary:      #B8F023;
-  --primary-hover:#CEFF4A;
-  --primary-light:rgba(184, 240, 35, 0.3);
+  --primary:      #00E5FF;
+  --primary-hover:#33ECFF;
+  --primary-light:rgba(0, 229, 255, 0.3);
   --success:      #4ADE80;
   --warning:      #FCD34D;
   --error:        #F87171;
-  --text:         #F0F5E8;
-  --muted:        #8BA882;
-  --subtle:       #556B52;
+  --text:         #F1F5F9;
+  --muted:        #94A3B8;
+  --subtle:       #475569;
 }
 
 /* ── Base Reset ─────────────────────────────────────────────── */
 html, body {
   height: 100%;
-  background-color: #0D150D; /* Deepest green-black canvas background */
+  background-color: #050A1A; /* Deepest navy-black canvas background */
   color: var(--text1);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
