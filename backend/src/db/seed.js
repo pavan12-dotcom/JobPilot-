@@ -112,35 +112,52 @@ async function main() {
   console.log('✅ Preferences saved');
 
   // ── 4. Sample Jobs ──────────────────────────────────────────
+  // Clean up old demo data first to prevent duplicate entries and foreign key violations
+  await prisma.applicationLog.deleteMany({
+    where: { application: { job: { external_id: { startsWith: 'demo-' } } } }
+  });
+  await prisma.application.deleteMany({
+    where: { job: { external_id: { startsWith: 'demo-' } } }
+  });
+  await prisma.jobMatch.deleteMany({
+    where: { job: { external_id: { startsWith: 'demo-' } } }
+  });
+  await prisma.job.deleteMany({
+    where: { external_id: { startsWith: 'demo-' } }
+  });
+  console.log('🗑️ Cleaned up old demo jobs');
+
   const jobs = [
-    { title: 'Senior Software Engineer', company: 'Google', location: 'Bangalore', source: 'ADZUNA', score: 94, salary_min: 2500000, salary_max: 4000000, job_type: 'FULL_TIME' },
-    { title: 'Backend Engineer (Node.js)', company: 'Swiggy', location: 'Bangalore', source: 'ADZUNA', score: 89, salary_min: 1800000, salary_max: 3000000, job_type: 'FULL_TIME' },
-    { title: 'Full Stack Developer', company: 'Razorpay', location: 'Bangalore', source: 'ADZUNA', score: 86, salary_min: 2000000, salary_max: 3500000, job_type: 'FULL_TIME' },
+    { title: 'Data Engineer, Play Data Science and Analytics', company: 'Google', location: 'Bangalore', source: 'ADZUNA', score: 94, salary_min: 2500000, salary_max: 4000000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4418755911' },
+    { title: 'Software Dev Engineer III', company: 'Swiggy', location: 'Bangalore', source: 'ADZUNA', score: 89, salary_min: 1800000, salary_max: 3000000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4426956543' },
+    { title: 'AI Builder', company: 'Razorpay', location: 'Bangalore', source: 'ADZUNA', score: 86, salary_min: 2000000, salary_max: 3500000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4428861140' },
     { title: 'Node.js Developer', company: 'Zomato', location: 'Remote', source: 'REMOTIVE', score: 82, salary_min: 1500000, salary_max: 2500000, job_type: 'REMOTE' },
-    { title: 'Software Engineer II', company: 'Microsoft', location: 'Hyderabad', source: 'ADZUNA', score: 88, salary_min: 2200000, salary_max: 3800000, job_type: 'FULL_TIME' },
+    { title: 'Consultant A2 - Data & AI', company: 'Microsoft', location: 'Hyderabad', source: 'ADZUNA', score: 88, salary_min: 2200000, salary_max: 3800000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4415360629' },
     { title: 'React + Node.js Engineer', company: 'Freshworks', location: 'Chennai', source: 'ADZUNA', score: 79, salary_min: 1600000, salary_max: 2800000, job_type: 'FULL_TIME' },
     { title: 'Backend Developer (Python)', company: 'CRED', location: 'Bangalore', source: 'ADZUNA', score: 72, salary_min: 1800000, salary_max: 3200000, job_type: 'FULL_TIME' },
     { title: 'Remote Full Stack Engineer', company: 'GitLab', location: 'Remote', source: 'REMOTIVE', score: 85, salary_min: 3000000, salary_max: 5000000, job_type: 'REMOTE' },
     { title: 'API Engineer', company: 'Stripe', location: 'Remote', source: 'THEMUSE', score: 91, salary_min: 3500000, salary_max: 6000000, job_type: 'REMOTE' },
     { title: 'Software Engineer', company: 'Atlassian', location: 'Remote', source: 'REMOTIVE', score: 80, salary_min: 2800000, salary_max: 4500000, job_type: 'REMOTE' },
-    { title: 'Junior Backend Developer', company: 'Paytm', location: 'Noida', source: 'ADZUNA', score: 65, salary_min: 800000, salary_max: 1500000, job_type: 'FULL_TIME' },
-    { title: 'DevOps Engineer', company: 'Infosys', location: 'Pune', source: 'ADZUNA', score: 58, salary_min: 1200000, salary_max: 2000000, job_type: 'FULL_TIME' },
+    { title: 'Senior Software Engineer - Backend', company: 'Paytm', location: 'Noida', source: 'ADZUNA', score: 65, salary_min: 800000, salary_max: 1500000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4395109023' },
+    { title: 'Data Engineer', company: 'Infosys', location: 'Pune', source: 'ADZUNA', score: 58, salary_min: 1200000, salary_max: 2000000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4397624058' },
     { title: 'TypeScript Developer', company: 'Vercel', location: 'Remote', source: 'THEMUSE', score: 88, salary_min: 3200000, salary_max: 5500000, job_type: 'REMOTE' },
     { title: 'Platform Engineer', company: 'Cloudflare', location: 'Remote', source: 'REMOTIVE', score: 76, salary_min: 3000000, salary_max: 5000000, job_type: 'REMOTE' },
-    { title: 'Software Engineer - Growth', company: 'PhonePe', location: 'Bangalore', source: 'ADZUNA', score: 83, salary_min: 2000000, salary_max: 3500000, job_type: 'FULL_TIME' },
+    { title: 'Site Reliability Engineer', company: 'PhonePe', location: 'Bangalore', source: 'ADZUNA', score: 83, salary_min: 2000000, salary_max: 3500000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4426787899' },
     { title: 'Backend Lead', company: 'Zepto', location: 'Mumbai', source: 'ADZUNA', score: 77, salary_min: 2500000, salary_max: 4000000, job_type: 'FULL_TIME' },
     { title: 'Full Stack Engineer', company: 'Linear', location: 'Remote', source: 'THEMUSE', score: 92, salary_min: 4000000, salary_max: 7000000, job_type: 'REMOTE' },
     { title: 'Node.js Backend Engineer', company: 'Ola', location: 'Bangalore', source: 'ADZUNA', score: 81, salary_min: 1800000, salary_max: 3000000, job_type: 'FULL_TIME' },
     { title: 'Software Developer', company: 'Meesho', location: 'Bangalore', source: 'ADZUNA', score: 74, salary_min: 1600000, salary_max: 2800000, job_type: 'FULL_TIME' },
-    { title: 'Cloud Engineer (AWS)', company: 'Amazon', location: 'Hyderabad', source: 'ADZUNA', score: 70, salary_min: 2200000, salary_max: 3800000, job_type: 'FULL_TIME' },
+    { title: 'Data Engineer I, Data Engineer RBS', company: 'Amazon', location: 'Hyderabad', source: 'ADZUNA', score: 70, salary_min: 2200000, salary_max: 3800000, job_type: 'FULL_TIME', apply_url: 'https://www.linkedin.com/jobs/view/4426374953' },
   ];
 
   const createdJobs = [];
   for (const job of jobs) {
+    const applyUrl = job.apply_url || `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`)}&location=India`;
     const created = await prisma.job.upsert({
       where: { external_id: `demo-${job.company.toLowerCase().replace(/\s+/g, '-')}-${job.title.toLowerCase().replace(/\s+/g, '-')}` },
       update: {
-        apply_url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`)}&location=India`,
+        title: job.title,
+        apply_url: applyUrl,
       },
       create: {
         external_id: `demo-${job.company.toLowerCase().replace(/\s+/g, '-')}-${job.title.toLowerCase().replace(/\s+/g, '-')}`,
@@ -153,7 +170,7 @@ async function main() {
         requirements: 'Requirements:\n- 2-5 years of software development experience\n- Proficiency in Node.js / React / Python\n- Experience with PostgreSQL or similar databases\n- Strong understanding of REST APIs\n- Experience with cloud platforms (AWS/GCP)\n- Good communication skills',
         salary_min: job.salary_min,
         salary_max: job.salary_max,
-        apply_url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(`${job.company} ${job.title}`)}&location=India`,
+        apply_url: applyUrl,
         posted_at: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
       },
     });
