@@ -208,7 +208,7 @@ export default function JobPilotApp() {
     if (typeof window === 'undefined') return;
 
     const handlePopState = (event) => {
-      const targetScreen = event.state?.screen;
+      const targetScreen = event.state?.screen || window.location.hash.replace('#', '');
 
       if (targetScreen === 'exit') {
         const now = Date.now();
