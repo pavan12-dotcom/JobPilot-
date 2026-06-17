@@ -220,11 +220,13 @@ export default function JobPilotApp() {
         }
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
         html,body{height:100%;background:#0D150D}
-        body{font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:20px}
-        .phone{width:390px;height:844px;background:var(--bg);border-radius:46px;overflow:hidden;
-          box-shadow:0 0 0 1px rgba(184,240,35,0.08),0 24px 80px rgba(0,0,0,0.7),0 0 60px rgba(184,240,35,0.04);
-          position:relative;display:flex;flex-direction:column;user-select:none}
-        @media(max-width:480px){.phone{width:100vw;height:100dvh;border-radius:0;box-shadow:none}}
+        body{font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;padding:0}
+        .phone{width:100%;max-width:430px;height:100vh;height:100dvh;background:var(--bg);border-radius:0;overflow:hidden;
+          position:relative;display:flex;flex-direction:column;user-select:none;
+          padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
+          padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+        @media(min-width:480px){.phone{border-radius:46px;height:844px;box-shadow:0 0 0 1px rgba(184,240,35,0.08),0 24px 80px rgba(0,0,0,0.7),0 0 60px rgba(184,240,35,0.04);padding-top:0;padding-bottom:0}}
+        @media(min-width:480px){body{padding:20px}}
         .status-bar{padding:14px 24px 6px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--bg);z-index:20}
         .status-bar .time{font-size:15px;font-weight:700;color:var(--text1)}
         .status-icons{display:flex;gap:6px;align-items:center}

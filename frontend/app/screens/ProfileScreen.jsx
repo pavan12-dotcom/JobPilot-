@@ -2,6 +2,130 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi, resumeApi, preferencesApi } from '@/lib/api';
 
+// ── iOS / standalone detection ───────────────────────────────────────────────
+function detectIOS() {
+  if (typeof navigator === 'undefined') return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function detectStandalone() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(display-mode: standalone)').matches ||
+    window.navigator.standalone === true;
+}
+
+// ── Install Banner component ─────────────────────────────────────────────────
+function InstallBanner({ installApp, isInstallable }) {
+  const [ios, setIos] = useState(false);
+  const [standalone, setStandalone] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    setIos(detectIOS());
+    setStandalone(detectStandalone());
+  }, []);
+
+  // Already running as installed PWA
+  if (standalone) {
+    return (
+      <div style={{ margin: '12px 20px 0', background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: 'var(--radius-md)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <i className="ti ti-device-mobile-check" style={{ fontSize: 22, color: '#4ADE80' }} />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#4ADE80' }}>App Installed ✓</div>
+          <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 1 }}>Running as a native app on your device</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Android / Chrome — native install prompt
+  if (isInstallable) {
+    return (
+      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.05) 100%)', border: '1px solid var(--lime)', borderRadius: 'var(--radius-md)', padding: '14px 16px', boxShadow: '0 4px 20px rgba(184,240,35,0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="ti ti-device-mobile" style={{ fontSize: 18, color: '#0D150D' }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Install JobPilot App</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 1 }}>Works offline · No App Store needed</div>
+            </div>
+          </div>
+          <button
+            onClick={installApp}
+            style={{ background: 'var(--lime)', color: '#0D150D', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}
+          >
+            <i className="ti ti-download" style={{ fontSize: 13 }} /> Install
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // iOS Safari — step-by-step guide
+  if (ios) {
+    return (
+      <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.04) 100%)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+        <button
+          onClick={() => setShowGuide(!showGuide)}
+          style={{ width: '100%', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', font: 'inherit' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--lime)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <i className="ti ti-brand-apple" style={{ fontSize: 18, color: '#0D150D' }} />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Add to Home Screen</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 1 }}>Install on your iPhone / iPad</div>
+            </div>
+          </div>
+          <i className={`ti ti-chevron-${showGuide ? 'up' : 'down'}`} style={{ fontSize: 16, color: 'var(--text3)', flexShrink: 0 }} />
+        </button>
+
+        {showGuide && (
+          <div style={{ borderTop: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { n: 1, icon: 'ti-share', text: 'Tap the Share button', sub: 'The box-with-arrow icon at the bottom of Safari' },
+              { n: 2, icon: 'ti-square-rounded-plus', text: 'Tap "Add to Home Screen"', sub: 'Scroll down in the share sheet to find it' },
+              { n: 3, icon: 'ti-check', text: 'Tap "Add"', sub: 'JobPilot appears on your home screen like a real native app' },
+            ].map(({ n, icon, text, sub }) => (
+              <div key={n} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'var(--lime)', color: '#0D150D', fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{n}</div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <i className={`ti ${icon}`} style={{ fontSize: 13, color: 'var(--lime)' }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)' }}>{text}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2, lineHeight: 1.4 }}>{sub}</div>
+                </div>
+              </div>
+            ))}
+            <div style={{ background: 'rgba(184,240,35,0.06)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border)' }}>
+              <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5 }}>
+                <i className="ti ti-info-circle" style={{ fontSize: 12, color: 'var(--lime)', marginRight: 4 }} />
+                Must use <strong style={{ color: 'var(--text1)' }}>Safari</strong> on iOS — Add to Home Screen only works in Safari.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop / other — generic tip
+  return (
+    <div style={{ margin: '12px 20px 0', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <i className="ti ti-device-mobile" style={{ fontSize: 20, color: 'var(--lime)' }} />
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)' }}>Get the Mobile App</div>
+        <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 1 }}>Open on your phone in Chrome (Android) or Safari (iOS) to install</div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 export default function ProfileScreen({ goTo, user, showToast, setUser, back, installApp, isInstallable }) {
   const [stats, setStats] = useState(null);
   const [resume, setResume] = useState(null);
@@ -98,18 +222,8 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
           </div>
         </div>
 
-        {/* PWA Install Banner */}
-        {isInstallable && (
-          <div style={{ margin: '12px 20px 0', background: 'linear-gradient(135deg, var(--lime-dim) 0%, rgba(206,255,74,0.06) 100%)', border: '1px solid var(--lime)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 20px rgba(184,240,35,0.08)' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>Install JobPilot App</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Add to your home screen for native experience</div>
-            </div>
-            <button onClick={installApp} style={{ background: 'var(--lime)', color: 'var(--bg)', border: 'none', borderRadius: 'var(--radius-full)', padding: '6px 14px', fontSize: 11, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-              Install <i className="ti ti-download" style={{ fontSize: 12 }} />
-            </button>
-          </div>
-        )}
+        {/* PWA Install Section */}
+        <InstallBanner installApp={installApp} isInstallable={isInstallable} />
 
         {/* Auto-apply status */}
         {prefs && (
