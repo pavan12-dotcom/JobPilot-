@@ -162,7 +162,25 @@ export default function ExploreScreen({ goTo, showToast, setSelectedJob, selecte
             { logo: 'N', bg: 'rgba(251,191,36,0.1)', color: '#FCD34D', title: 'Senior UI Designer', co: 'Netflix · Los Angeles', score: 88, type: 'Hybrid', sal: '$130k–$170k' },
             { logo: 'Sh', bg: 'rgba(52,211,153,0.1)', color: '#34D399', title: 'Design Lead', co: 'Shopify · Remote', score: 82, type: 'Remote', sal: '$150k–$190k' },
           ].map((d, i) => (
-            <div key={i} className="jcard" onClick={() => goTo('detail')}>
+            <div key={i} className="jcard" onClick={() => {
+              setSelectedJob({
+                job: {
+                  title: d.title,
+                  company: d.co.split(' · ')[0] || d.co,
+                  location: d.co.split(' · ')[1] || 'Remote',
+                  job_type: d.type === 'Remote' ? 'REMOTE' : 'FULL_TIME',
+                  apply_url: 'https://www.linkedin.com/jobs',
+                  salary_min: 120000,
+                  salary_max: 160000,
+                  description: "Join an amazing team and help shape experiences for millions of users. Partner with engineering, research, and PMs to define and ship high-quality features."
+                },
+                match_score: d.score,
+                match_reasons: {
+                  summary: "This is a pre-configured demo match showing high compatibility with your profile."
+                }
+              });
+              goTo('detail');
+            }}>
               <div className="jc-row">
                 <div className="jc-logo" style={{ background: d.bg, color: d.color }}>{d.logo}</div>
                 <div className="jc-inf"><div className="jc-title">{d.title}</div><div className="jc-meta">{d.co}</div></div>

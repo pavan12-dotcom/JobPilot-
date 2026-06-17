@@ -11,6 +11,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
 
   const match = selectedJob || {};
   const job = match.job || {};
+  const applyUrl = job.apply_url || 'https://www.linkedin.com/jobs';
   const app = match.application || {};
   const reasons = match.match_reasons || {};
   const score = match.match_score || 75;
@@ -97,13 +98,13 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
     try {
       await jobsApi.apply(job.id);
       showToast('🚀 Application submitted successfully!');
-      if (job.apply_url) {
-        window.open(job.apply_url, '_blank', 'noopener,noreferrer');
+      if (applyUrl) {
+        window.open(applyUrl, '_blank', 'noopener,noreferrer');
       }
     } catch {
       showToast('🚀 Application submitted!');
-      if (job.apply_url) {
-        window.open(job.apply_url, '_blank', 'noopener,noreferrer');
+      if (applyUrl) {
+        window.open(applyUrl, '_blank', 'noopener,noreferrer');
       }
     } finally {
       setApplying(false);
@@ -147,9 +148,9 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                 <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)' }}>{score}% AI Match</span>
               </div>
             )}
-            {job.apply_url && (
+            {applyUrl && (
               <a 
-                href={job.apply_url} 
+                href={applyUrl} 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 style={{ 
@@ -361,8 +362,8 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   </div>
                 ))}
               </div>
-              {job.apply_url && (
-                <a href={job.apply_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
+              {applyUrl && (
+                <a href={applyUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--lime)', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
                   <i className="ti ti-external-link" /> View original posting
                 </a>
               )}
