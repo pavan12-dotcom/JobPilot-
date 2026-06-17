@@ -30,12 +30,14 @@ export default function JobPilotApp() {
   const hist = useRef(['splash']);
   const goToRef = useRef(null);
 
-  // Mount check + detect OAuth callback in URL hash
+  // Mount check + detect OAuth callback (PKCE uses ?code= query param)
   useEffect(() => {
     setMounted(true);
-    // If URL has OAuth token hash, show loader immediately
-    if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
-      setAuthLoading(true);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('code') || window.location.hash.includes('access_token')) {
+        setAuthLoading(true);
+      }
     }
   }, []);
 

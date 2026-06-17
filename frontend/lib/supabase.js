@@ -4,18 +4,27 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = supabaseUrl && supabaseAnonKey
+const isValidUrl = (url) => {
+  try {
+    return url && (url.startsWith('http://') || url.startsWith('https://'));
+  } catch {
+    return false;
+  }
+};
+
+export const supabase = isValidUrl(supabaseUrl) && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 // Auth helpers
 export async function signInWithGoogle() {
   if (!supabase) throw new Error('Supabase not configured');
+  const redirectTo = typeof window !== 'undefined'
+    ? `${window.location.origin}/auth/callback`
+    : 'https://aipilot-dusky.vercel.app/auth/callback';
   return supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: {
-      redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/` : 'http://localhost:3001/',
-    },
+    options: { redirectTo },
   });
 }
 
