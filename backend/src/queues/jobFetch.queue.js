@@ -24,7 +24,7 @@ function getJobFetchQueue() {
   return jobFetchQueue;
 }
 
-// Schedule periodic job fetching (every 2 hours)
+// Schedule periodic job fetching (every hour)
 async function schedulePeriodicFetch() {
   const queue = getJobFetchQueue();
 
@@ -33,12 +33,12 @@ async function schedulePeriodicFetch() {
     'periodic-fetch',
     { type: 'all-users' },
     {
-      repeat: { cron: '0 */2 * * *' }, // Every 2 hours
+      repeat: { cron: '0 * * * *' }, // Every hour
       jobId: 'periodic-fetch',
     },
   );
 
-  logger.info('📅 Periodic job fetch scheduled (every 2 hours)');
+  logger.info('📅 Periodic job fetch scheduled (every hour)');
 }
 
 module.exports = { getJobFetchQueue, schedulePeriodicFetch, get jobFetchQueue() { return getJobFetchQueue(); } };
