@@ -40,6 +40,7 @@ export default function JobPilotApp() {
       }
       if (params.get('auth_error') === 'true') {
         showToast('Google Sign-In failed. Check Supabase/Google configuration.');
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
   }, []);
