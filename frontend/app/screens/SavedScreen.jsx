@@ -103,13 +103,20 @@ export default function SavedScreen({ goTo, showToast, setSelectedJob, selectedJ
             const badge = STATUS_BADGE[app.status] || STATUS_BADGE.NEW;
             const co = job.company || 'Company';
             const color = logoColors[co] || 'var(--lime)';
+            const formatSalaryText = (appSal, min, max) => {
+              if (appSal) return appSal;
+              if (!min && !max) return '';
+              const fmt = (n) => n >= 100000 ? `₹${(n / 100000).toFixed(0)}L` : `₹${n.toLocaleString()}`;
+              return min && max ? `${fmt(min)} – ${fmt(max)}` : min ? `${fmt(min)}+` : '';
+            };
+            const salaryText = formatSalaryText(app.salary, job.salary_min, job.salary_max);
             return (
               <div key={app.id} className="si" onClick={() => { setSelectedJob({ job, application: app }); goTo('detail'); }}>
                 <div className="si-logo" style={{ background: `${color}18`, color }}>{logoInitials(co)}</div>
                 <div className="si-inf">
                   <div className="si-t">{job.title || 'Position'}</div>
                   <div className="si-s">{co} · {job.location || 'Remote'}</div>
-                  <div className="si-sal">{app.salary || job.salary_min ? `₹${(job.salary_min / 100000).toFixed(0)}L+` : ''}{timeAgo(app.created_at) && ` · ${timeAgo(app.created_at)}`}</div>
+                  <div className="si-sal">{salaryText}{timeAgo(app.created_at) && ` · ${timeAgo(app.created_at)}`}</div>
                 </div>
                 <div className={`si-bdg ${badge.cls}`} style={badge.color ? { background: badge.bg, color: badge.color } : {}}>
                   {badge.label}
