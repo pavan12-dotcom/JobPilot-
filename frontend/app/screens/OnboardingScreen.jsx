@@ -15,7 +15,7 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
   const [roleInput, setRoleInput] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [prefs, setPrefs] = useState({
-    target_roles: ['Product Designer'],
+    target_roles: [],
     target_locations: ['Remote', 'Hyderabad'],
     preferred_job_types: ['FULL_TIME', 'REMOTE'],
     min_match_score: 70,
@@ -45,9 +45,19 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
     if (!resumeFile) return;
     setUploading(true);
     try {
-      await resumeApi.upload(resumeFile, 'My Resume');
+      const res = await resumeApi.upload(resumeFile, 'My Resume');
       setResumeUploaded(true);
-      showToast('Resume uploaded & parsed by Claude AI!');
+      showToast('Resume uploaded & parsed successfully!');
+      
+      // Dynamically pre-fill target roles from parsed resume structure
+      const parsed = res?.data?.parsed_data;
+      if (parsed) {
+        const role = parsed.current_role || (parsed.preferred_roles && parsed.preferred_roles[0]);
+        if (role) {
+          setPrefs((p) => ({ ...p, target_roles: [role] }));
+        }
+      }
+      
       setStep(2);
     } catch {
       showToast('Upload failed. Please try again.');
@@ -203,7 +213,16 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
               <button onClick={() => setStep(1)} style={{ background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '11px 16px', color: 'var(--text1)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                 <i className="ti ti-arrow-left" />
               </button>
-              <button onClick={() => setStep(3)} style={{ flex: 1, background: 'var(--lime)', color: 'var(--bg)', border: 'none', padding: '12px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button
+                onClick={() => {
+                  if (prefs.target_roles.length === 0 || !prefs.target_roles[0]?.trim()) {
+                    showToast('Please enter a target role to continue');
+                    return;
+                  }
+                  setStep(3);
+                }}
+                style={{ flex: 1, background: 'var(--lime)', color: 'var(--bg)', border: 'none', padding: '12px', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit' }}
+              >
                 Continue <i className="ti ti-arrow-right" style={{ fontSize: 11 }} />
               </button>
             </div>

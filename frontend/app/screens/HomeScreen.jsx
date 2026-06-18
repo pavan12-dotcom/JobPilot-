@@ -145,8 +145,8 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
               <div className="fc-logo">{(featured.job?.company || 'G')[0]}</div>
               <div className="fc-badge">{featured.match_score ? `${featured.match_score}% Match` : 'Featured'}</div>
             </div>
-            <div className="fc-title">{featured.job?.title || 'Product Designer'}</div>
-            <div className="fc-co">{featured.job?.company || 'Google'} · {featured.job?.location || 'Remote'}</div>
+            <div className="fc-title">{featured.job?.title || 'Job Title'}</div>
+            <div className="fc-co">{featured.job?.company || 'Company'} · {featured.job?.location || 'Location'}</div>
             <div className="fc-tags">
               <div className="fc-tag">{featured.job?.job_type?.replace('_', '-') || 'Remote'}</div>
               <div className="fc-tag">Full-time</div>

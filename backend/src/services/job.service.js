@@ -216,12 +216,42 @@ async function getRecommendedJobs(userId, options = {}) {
   };
 
   if (targetRole && targetRole.trim()) {
-    where.job = {
-      OR: [
-        { title: { contains: targetRole.trim(), mode: 'insensitive' } },
-        { description: { contains: targetRole.trim(), mode: 'insensitive' } },
-      ],
-    };
+    const roleTerm = targetRole.trim().toLowerCase();
+    if (roleTerm.includes('react')) {
+      where.job = {
+        OR: [
+          { title: { contains: 'react', mode: 'insensitive' } },
+          { description: { contains: 'react', mode: 'insensitive' } }
+        ]
+      };
+    } else if (roleTerm.includes('data') || roleTerm.includes('analyst') || roleTerm.includes('analytics')) {
+      where.job = {
+        OR: [
+          { title: { contains: 'data', mode: 'insensitive' } },
+          { title: { contains: 'analyst', mode: 'insensitive' } },
+          { title: { contains: 'analytics', mode: 'insensitive' } },
+          { description: { contains: 'data', mode: 'insensitive' } },
+          { description: { contains: 'analyst', mode: 'insensitive' } }
+        ]
+      };
+    } else if (roleTerm.includes('design') || roleTerm.includes('ux') || roleTerm.includes('ui')) {
+      where.job = {
+        OR: [
+          { title: { contains: 'design', mode: 'insensitive' } },
+          { title: { contains: 'ux', mode: 'insensitive' } },
+          { title: { contains: 'ui', mode: 'insensitive' } },
+          { description: { contains: 'design', mode: 'insensitive' } },
+          { description: { contains: 'ux', mode: 'insensitive' } }
+        ]
+      };
+    } else {
+      where.job = {
+        OR: [
+          { title: { contains: targetRole.trim(), mode: 'insensitive' } },
+          { description: { contains: targetRole.trim(), mode: 'insensitive' } },
+        ],
+      };
+    }
   }
 
   const matches = await prisma.jobMatch.findMany({
