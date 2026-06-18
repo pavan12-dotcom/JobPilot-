@@ -232,8 +232,19 @@ async function applyGeneric(page, { resumeData, coverLetter, jobData, localResum
       }
 
       // 2. Second Click: Click "Apply" on the details page if necessary
-      await scrollAndClickApply(targetPage, log);
-      await humanDelay(4000, 6000); // Wait for the form modal or page to load
+      const hasForm = await targetPage.evaluate(() => {
+        const form = document.querySelector('form');
+        if (!form) return false;
+        const style = window.getComputedStyle(form);
+        return form.offsetWidth > 0 && form.offsetHeight > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      });
+
+      if (!hasForm) {
+        await scrollAndClickApply(targetPage, log);
+        await humanDelay(4000, 6000); // Wait for the form modal or page to load
+      } else {
+        await log('Generic: Form already visible on page, skipping second click step.');
+      }
     }
 
     // Scroll page down and back up to trigger form inputs hydration
