@@ -1,4 +1,6 @@
 // src/workers/autoApply.worker.js
+const os = require('os');
+const path = require('path');
 const prisma = require('../db/prisma');
 const applicationService = require('../services/application.service');
 const { generateCoverLetter } = require('../ai/coverLetter');
@@ -120,7 +122,7 @@ async function processAutoApply(job) {
 
     // Take final screenshot
     try {
-      await page.screenshot({ path: `/tmp/screenshot_${applicationId}.png` });
+      await page.screenshot({ path: path.join(os.tmpdir(), `screenshot_${applicationId}.png`) });
     } catch {}
 
     if (applyResult.success) {
