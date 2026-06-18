@@ -259,7 +259,10 @@ async function getRecommendedJobs(userId, options = {}) {
     include: {
       job: true,
     },
-    orderBy: { match_score: 'desc' },
+    orderBy: [
+      { created_at: 'desc' },
+      { match_score: 'desc' }
+    ],
     skip: (page - 1) * limit,
     take: Number(limit),
   });
