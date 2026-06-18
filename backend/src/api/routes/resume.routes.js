@@ -106,13 +106,15 @@ router.post(
   }),
 );
 
-// PATCH /api/resume/:id — Update resume details (e.g. label)
+// PATCH /api/resume/:id — Update resume details (e.g. label, parsed_data)
 router.patch(
   '/:id',
   authenticate,
   asyncHandler(async (req, res) => {
-    const { label } = req.body;
-    if (!label) throw ApiError.badRequest('Label is required');
+    const { label, parsed_data } = req.body;
+    if (label === undefined && parsed_data === undefined) {
+      throw ApiError.badRequest('Label or parsed_data is required');
+    }
 
     const resume = await prisma.resume.findFirst({
       where: { id: req.params.id, user_id: req.user.id },
@@ -121,7 +123,15 @@ router.patch(
 
     const updated = await prisma.resume.update({
       where: { id: req.params.id },
-      data: { label },
+      data: {
+        ...(label !== undefined && { label }),
+        ...(parsed_data !== undefined && {
+          parsed_data: {
+            ...(typeof resume.parsed_data === 'object' && resume.parsed_data ? resume.parsed_data : {}),
+            ...parsed_data,
+          },
+        }),
+      },
     });
 
     res.json({

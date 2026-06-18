@@ -77,4 +77,52 @@ router.get(
   }),
 );
 
+// PATCH /api/auth/profile — Update profile details
+router.patch(
+  '/profile',
+  authenticate,
+  validate({
+    body: z.object({
+      name: z.string().min(1).optional(),
+      email: z.string().email().optional(),
+      daily_apply_limit: z.number().min(1).max(100).optional(),
+      is_premium: z.boolean().optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const { name, email, daily_apply_limit, is_premium } = req.body;
+
+    if (email && email !== req.user.email) {
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        throw ApiError.conflict('Email is already in use');
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        ...(name && { name }),
+        ...(email && { email }),
+        ...(daily_apply_limit !== undefined && { daily_apply_limit }),
+        ...(is_premium !== undefined && { is_premium }),
+      },
+    });
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        avatar_url: updated.avatar_url,
+        is_premium: updated.is_premium,
+        daily_apply_limit: updated.daily_apply_limit,
+      },
+    });
+  }),
+);
+
 module.exports = router;
+

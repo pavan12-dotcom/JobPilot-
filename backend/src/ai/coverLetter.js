@@ -25,6 +25,7 @@ Experience: ${resumeData.total_experience_years} years
 ${skillsContext}
 Most recent experience: ${resumeData.experience?.[0]?.role} at ${resumeData.experience?.[0]?.company}
 Summary: ${resumeData.summary}
+${resumeData.cover_letter ? `Candidate Cover Letter Guidelines/Instructions: ${resumeData.cover_letter}` : ''}
 
 JOB:
 Title: ${job.title}
@@ -40,6 +41,7 @@ RULES:
 - End with a clear call to action
 - Sound human, confident, and specific — not generic
 - Keep it under 200 words
+${resumeData.cover_letter ? `- Adhere to the Candidate Cover Letter Guidelines/Instructions provided above` : ''}
 
 Write the cover letter:`;
 

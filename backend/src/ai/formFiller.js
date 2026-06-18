@@ -23,7 +23,11 @@ CANDIDATE PROFILE:
 Name: ${resumeData.name}
 Email: ${resumeData.email}
 Phone: ${resumeData.phone}
+Current Location: ${resumeData.current_location || resumeData.location || 'Not specified'}
 Current Role: ${resumeData.current_role}
+LinkedIn: ${resumeData.linkedin_url || resumeData.linkedin || ''}
+GitHub: ${resumeData.github_url || resumeData.github || ''}
+Portfolio: ${resumeData.portfolio_url || resumeData.portfolio || ''}
 Total Experience: ${resumeData.total_experience_years} years
 Skills: ${resumeData.skills?.join(', ')}
 Education: ${resumeData.education?.[0]?.degree} from ${resumeData.education?.[0]?.college} (${resumeData.education?.[0]?.year})
@@ -45,8 +49,11 @@ Rules:
 - For "years of experience" fields: use ${resumeData.total_experience_years}
 - For salary/CTC fields: answer "As per company standards" or leave blank
 - For "notice period": answer "Immediate / 30 days"
-- For "current location": use first location from their experience or "Bangalore"
+- For "current location" or "city" fields: use ${resumeData.current_location || resumeData.location || 'Bangalore'}
 - For "willing to relocate": answer "Yes"
+- For "linkedin" fields: use ${resumeData.linkedin_url || resumeData.linkedin || ''}
+- For "github" fields: use ${resumeData.github_url || resumeData.github || ''}
+- For "portfolio" or "website" fields: use ${resumeData.portfolio_url || resumeData.portfolio || ''}
 - For unknown fields: return ""`;
 
   const env = require('../config/env');
