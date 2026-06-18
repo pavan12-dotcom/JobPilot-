@@ -293,23 +293,23 @@ export default function JobPilotApp() {
   const styleTag = (
     <style dangerouslySetInnerHTML={{ __html: `
         :root {
-          --bg:#0A1128;--bg2:#101F42;--bg3:#1B2E5C;--bg4:#253D74;
-          --card:rgba(16,31,66,0.95);--card2:rgba(27,46,92,0.9);
-          --lime:#00E5FF;--lime2:#33ECFF;
-          --lime-dim:rgba(0, 229, 255, 0.12);--lime-mid:rgba(0, 229, 255, 0.22);
-          --text1:#F1F5F9;--text2:#94A3B8;--text3:#475569;
-          --border:rgba(0, 229, 255, 0.10);--border2:rgba(0, 229, 255, 0.20);
+          --bg:#E7E5E2;--bg2:#DFDDD9;--bg3:#111111;--bg4:#B0AFA9;
+          --card:#DFDDD9;--card2:#111111;
+          --lime:#E13E3E;--lime2:#EF4444;
+          --lime-dim:rgba(225,62,62,0.08);--lime-mid:rgba(225,62,62,0.15);
+          --text1:#111111;--text2:#555555;--text3:#888888;
+          --border:rgba(0,0,0,0.08);--border2:rgba(225,62,62,0.15);
           --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;--radius-full:999px;
           --tr:0.22s cubic-bezier(0.4,0,0.2,1);
         }
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-        html,body{height:100%;background:#050A1A}
+        html,body{height:100%;background:#C9C7C4}
         body{font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;padding:0}
         .phone{width:100%;max-width:430px;height:100vh;height:100dvh;background:var(--bg);border-radius:0;overflow:hidden;
           position:relative;display:flex;flex-direction:column;user-select:none;
           padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);
           padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-        @media(min-width:480px){.phone{border-radius:46px;height:844px;box-shadow:0 0 0 1px rgba(0, 229, 255, 0.08),0 24px 80px rgba(0,0,0,0.7),0 0 60px rgba(0, 229, 255, 0.04);padding-top:0;padding-bottom:0}}
+        @media(min-width:480px){.phone{border-radius:46px;height:844px;box-shadow:0 0 0 12px #111111,0 24px 80px rgba(0,0,0,0.3);padding-top:0;padding-bottom:0}}
         @media(min-width:480px){body{padding:20px}}
         .status-bar{padding:14px 24px 6px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;background:var(--bg);z-index:20}
         .status-bar .time{font-size:15px;font-weight:700;color:var(--text1)}
@@ -327,17 +327,18 @@ export default function JobPilotApp() {
         .screens.back .screen.inactive{transform:translateX(-28%);pointer-events:none;z-index:1;opacity:0.5}
         .screens.back .screen.out{transform:translateX(100%);pointer-events:none;z-index:10;opacity:1}
         .screens.back .screen.active{transform:translateX(0);opacity:1;z-index:5}
-        .bnav{background:var(--bg2);border-top:1px solid var(--border);padding:10px 0 20px;
-          display:flex;justify-content:space-around;flex-shrink:0;z-index:20}
-        .nbtn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;
-          padding:4px 14px;border:none;background:none;transition:transform var(--tr);font-family:inherit}
-        .nbtn:active{transform:scale(0.9)}
-        .nbtn i{font-size:22px;color:var(--text3);transition:color var(--tr)}
-        .nbtn.active i{color:var(--lime)}
-        .ndot{width:4px;height:4px;border-radius:50%;background:var(--lime);opacity:0;transition:opacity var(--tr)}
-        .nbtn.active .ndot{opacity:1}
-        .nlbl{font-size:9px;font-weight:500;color:var(--text3);transition:color var(--tr)}
-        .nbtn.active .nlbl{color:var(--lime)}
+        .bnav{background:#111111;border-radius:999px;margin:10px 24px 24px;padding:8px 12px;
+          display:flex;justify-content:space-between;align-items:center;flex-shrink:0;z-index:20;
+          box-shadow:0 8px 24px rgba(0,0,0,0.15)}
+        .nbtn{display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border:none;
+          background:none;border-radius:999px;transition:all 0.2s cubic-bezier(0.4,0,0.2,1);color:#888888;font-family:inherit}
+        .nbtn:active{transform:scale(0.95)}
+        .nbtn i{font-size:20px;color:#888888;transition:color 0.2s}
+        .nbtn.active i{color:#111111}
+        .ndot{display:none}
+        .nlbl{font-size:11px;font-weight:700;color:#888888;display:none;transition:color 0.2s}
+        .nbtn.active .nlbl{color:#111111;display:inline-block}
+        .nbtn.active{background:#FFFFFF;color:#111111}
         .topbar{padding:10px 20px 8px;display:flex;align-items:center;justify-content:space-between;
           background:var(--bg);position:sticky;top:0;z-index:5;border-bottom:1px solid var(--border)}
         .logo{font-size:20px;font-weight:800;color:var(--text1);letter-spacing:-0.5px}
@@ -348,7 +349,7 @@ export default function JobPilotApp() {
         .ibtn i{font-size:18px;color:var(--lime)}
         .ava{width:36px;height:36px;border-radius:50%;background:var(--lime);color:var(--bg);
           font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;
-          cursor:pointer;border:2px solid rgba(0, 229, 255, 0.3)}
+          cursor:pointer;border:2px solid rgba(225, 62, 62, 0.3)}
         .splash{background:var(--bg);display:flex;flex-direction:column;justify-content:center;
           align-items:center;padding:40px 32px;text-align:center;min-height:100%}
         .splash-ring{width:180px;height:180px;border-radius:50%;border:1px solid var(--border2);
@@ -578,7 +579,7 @@ export default function JobPilotApp() {
 
   if (!mounted) {
     return (
-      <div style={{ background: '#050A1A', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: '#C9C7C4', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <i className="ti ti-loader" style={{ fontSize: 32, color: 'var(--lime)', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -588,11 +589,11 @@ export default function JobPilotApp() {
   // Show full-screen loader while processing OAuth redirect
   if (authLoading) {
     return (
-      <div style={{ background: '#050A1A', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <div style={{ width: 56, height: 56, background: 'rgba(0, 229, 255, 0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <i className="ti ti-loader" style={{ fontSize: 28, color: '#00E5FF', animation: 'spin 1s linear infinite' }} />
+      <div style={{ background: '#C9C7C4', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+        <div style={{ width: 56, height: 56, background: 'rgba(225, 62, 62, 0.12)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <i className="ti ti-loader" style={{ fontSize: 28, color: '#E13E3E', animation: 'spin 1s linear infinite' }} />
         </div>
-        <div style={{ color: '#94A3B8', fontSize: 14, fontWeight: 500 }}>Signing you in…</div>
+        <div style={{ color: '#111111', fontSize: 14, fontWeight: 500 }}>Signing you in…</div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
     );
