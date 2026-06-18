@@ -61,6 +61,20 @@ async function updateStatus(applicationId, userId, newStatus, extra = {}) {
 
   await logEvent(applicationId, `Status changed to ${newStatus}`, extra);
 
+  // Broadcast WebSocket update
+  try {
+    const { broadcastToUser } = require('./websocket.service');
+    broadcastToUser(updated.user_id, 'application-status-updated', {
+      applicationId,
+      status: newStatus,
+      extra,
+      application: updated
+    });
+    broadcastToUser(updated.user_id, 'stats-updated', {});
+  } catch (wsErr) {
+    logger.error('Failed to broadcast status update: ' + wsErr.message);
+  }
+
   // Send email and push notification on applied response statuses
   if (['INTERVIEW', 'OFFER', 'REJECTED'].includes(newStatus)) {
     const actualUserId = application.user_id;
@@ -110,7 +124,7 @@ async function addNote(applicationId, userId, note) {
  * Log an application event
  */
 async function logEvent(applicationId, event, metadata = {}, screenshotUrl = null) {
-  return prisma.applicationLog.create({
+  const log = await prisma.applicationLog.create({
     data: {
       application_id: applicationId,
       event,
@@ -118,6 +132,24 @@ async function logEvent(applicationId, event, metadata = {}, screenshotUrl = nul
       screenshot_url: screenshotUrl,
     },
   });
+
+  try {
+    const app = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { user_id: true }
+    });
+    if (app) {
+      const { broadcastToUser } = require('./websocket.service');
+      broadcastToUser(app.user_id, 'application-log-added', {
+        applicationId,
+        log
+      });
+    }
+  } catch (wsErr) {
+    logger.error('Failed to broadcast application log: ' + wsErr.message);
+  }
+
+  return log;
 }
 
 /**
@@ -163,6 +195,66 @@ async function checkDailyLimit(userId) {
   return { count, limit: user.daily_apply_limit, exceeded: count >= user.daily_apply_limit };
 }
 
+/**
+ * Update draft fields (answers, form_data, cover_letter)
+ */
+async function updateDraft(applicationId, userId, { answers, form_data, cover_letter }) {
+  const application = await prisma.application.findFirst({
+    where: { id: applicationId, user_id: userId }
+  });
+
+  if (!application) {
+    const ApiError = require('../utils/ApiError');
+    throw ApiError.notFound('Application not found');
+  }
+
+  const updated = await prisma.application.update({
+    where: { id: applicationId },
+    data: {
+      ...(answers !== undefined && { answers }),
+      ...(form_data !== undefined && { form_data }),
+      ...(cover_letter !== undefined && { cover_letter })
+    }
+  });
+
+  await logEvent(applicationId, 'Draft updated by user');
+  return updated;
+}
+
+/**
+ * Approve draft application and queue it for submission
+ */
+async function approveApplication(applicationId, userId) {
+  const application = await prisma.application.findFirst({
+    where: { id: applicationId, user_id: userId },
+  });
+
+  if (!application) {
+    const ApiError = require('../utils/ApiError');
+    throw ApiError.notFound('Application not found');
+  }
+
+  const ApiError = require('../utils/ApiError');
+  if (application.status !== 'READY_FOR_REVIEW') {
+    throw ApiError.badRequest('Only applications in READY_FOR_REVIEW status can be approved');
+  }
+
+  // Update status to QUEUED
+  const updated = await updateStatus(applicationId, userId, 'QUEUED');
+
+  // Enqueue Playwright submission worker task
+  const { getAutoApplyQueue } = require('../queues/autoApply.queue');
+  const autoApplyQueue = getAutoApplyQueue();
+  await autoApplyQueue.add(
+    'submit',
+    { applicationId },
+    { attempts: 2, backoff: 10000 }
+  );
+
+  await logEvent(applicationId, 'Application approved and queued for submission');
+  return updated;
+}
+
 module.exports = {
   createApplication,
   updateStatus,
@@ -171,4 +263,6 @@ module.exports = {
   getApplicationWithLogs,
   getDailyCount,
   checkDailyLimit,
+  updateDraft,
+  approveApplication,
 };

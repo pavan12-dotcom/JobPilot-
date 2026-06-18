@@ -29,6 +29,20 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
 
   useEffect(() => {
     loadDashboard();
+
+    const handleRealtimeUpdate = () => {
+      loadDashboard();
+    };
+
+    window.addEventListener('jobpilot:stats-updated', handleRealtimeUpdate);
+    window.addEventListener('jobpilot:job-matched', handleRealtimeUpdate);
+    window.addEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
+
+    return () => {
+      window.removeEventListener('jobpilot:stats-updated', handleRealtimeUpdate);
+      window.removeEventListener('jobpilot:job-matched', handleRealtimeUpdate);
+      window.removeEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
+    };
   }, []);
 
   async function loadDashboard() {

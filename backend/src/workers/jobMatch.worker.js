@@ -65,6 +65,20 @@ async function processJobMatch(job) {
 
   logger.info(`Match: ${jobRecord.title} → ${matchResult.match_score}/100 for ${user.email}`);
 
+  // Broadcast WebSocket match update
+  try {
+    const { broadcastToUser } = require('../services/websocket.service');
+    broadcastToUser(userId, 'job-matched', {
+      matchId: match.id,
+      score: matchResult.match_score,
+      job: jobRecord,
+      matchResult
+    });
+    broadcastToUser(userId, 'stats-updated', {});
+  } catch (wsErr) {
+    logger.error('Failed to broadcast job match update: ' + wsErr.message);
+  }
+
   // Trigger push notification for high-scoring job match
   if (matchResult.match_score >= prefs.min_match_score) {
     const { pushNewJobMatch } = require('../services/push.service');
@@ -88,17 +102,24 @@ async function processJobMatch(job) {
 
       if (!existingApp) {
         const application = await applicationService.createApplication(
-          userId, jobId, resume.id, match.id, 'AUTO',
+          userId,
+          jobId,
+          resume.id,
+          match.id,
+          'AUTO',
         );
+
+        // Update status to DRAFT to represent active preparation
+        await applicationService.updateStatus(application.id, 'system', 'DRAFT');
 
         const autoApplyQueue = getAutoApplyQueue();
         await autoApplyQueue.add(
-          'apply',
+          'prepare',
           { applicationId: application.id },
           { attempts: 2, backoff: 10000 },
         );
 
-        logger.info(`🤖 Auto-apply queued for ${jobRecord.title} (score: ${matchResult.match_score})`);
+        logger.info(`🤖 Auto-apply draft preparation queued for ${jobRecord.title} (score: ${matchResult.match_score})`);
       }
     }
   }

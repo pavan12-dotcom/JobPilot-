@@ -3,15 +3,19 @@ import { useState, useEffect } from 'react';
 import { applicationsApi } from '@/lib/api';
 import DetailScreen from './DetailScreen';
 
-const STATUS_FILTERS = ['All', 'New', 'Applied', 'Interview', 'Offer', 'Rejected'];
+const STATUS_FILTERS = ['All', 'New', 'Applied', 'Needs Review', 'Interview', 'Offer', 'Rejected'];
 const STATUS_BADGE = {
-  APPLIED:   { cls: 'b-app', label: 'Applied' },
-  INTERVIEW: { cls: 'b-int', label: 'Interview' },
-  OFFER:     { cls: 'b-int', label: 'Offer', color: '#4ADE80', bg: 'rgba(74,222,128,0.12)' },
-  REJECTED:  { cls: 'b-clo', label: 'Rejected' },
-  FAILED:    { cls: 'b-clo', label: 'Failed' },
-  PENDING:   { cls: 'b-new', label: 'New' },
-  NEW:       { cls: 'b-new', label: 'New' },
+  QUEUED:       { cls: 'b-new', label: 'Queued' },
+  APPLYING:     { cls: 'b-new', label: 'Applying…' },
+  APPLIED:      { cls: 'b-app', label: 'Applied' },
+  NEEDS_REVIEW: { cls: 'b-rev', label: 'Needs Review' },
+  INTERVIEW:    { cls: 'b-int', label: 'Interview' },
+  OFFER:        { cls: 'b-int', label: 'Offer', color: '#4ADE80', bg: 'rgba(74,222,128,0.12)' },
+  REJECTED:     { cls: 'b-clo', label: 'Rejected' },
+  FAILED:       { cls: 'b-clo', label: 'Failed' },
+  WITHDRAWN:    { cls: 'b-clo', label: 'Withdrawn' },
+  PENDING:      { cls: 'b-new', label: 'New' },
+  NEW:          { cls: 'b-new', label: 'New' },
 };
 
 function timeAgo(iso) {
@@ -31,6 +35,18 @@ export default function SavedScreen({ goTo, showToast, setSelectedJob, selectedJ
 
   useEffect(() => {
     loadApps();
+
+    const handleRealtimeUpdate = () => {
+      loadApps();
+    };
+
+    window.addEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
+    window.addEventListener('jobpilot:job-matched', handleRealtimeUpdate);
+
+    return () => {
+      window.removeEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
+      window.removeEventListener('jobpilot:job-matched', handleRealtimeUpdate);
+    };
   }, []);
 
   async function loadApps() {
@@ -49,8 +65,8 @@ export default function SavedScreen({ goTo, showToast, setSelectedJob, selectedJ
   const filtered = filter === 'All' ? list : list.filter((a) => {
     const status = (a.status || '').toUpperCase();
     const f = filter.toUpperCase();
-    if (f === 'NEW') return status === 'PENDING' || status === 'NEW';
-    return status === f;
+    if (f === 'NEW') return status === 'PENDING' || status === 'NEW' || status === 'QUEUED' || status === 'APPLYING';
+    return status === f || status === f.replace(/\s+/g, '_');
   });
 
   const logoInitials = (company) => (company || 'J').slice(0, 2);

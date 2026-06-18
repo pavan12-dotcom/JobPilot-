@@ -39,15 +39,22 @@ enum ExperienceLevel {
 }
 
 enum ApplicationStatus {
+  DRAFT
   QUEUED
   APPLYING
   APPLIED
+  READY_FOR_REVIEW
+  SUBMITTED
   FAILED
+  NEEDS_REVIEW
+  WAITING_FOR_VERIFICATION
   INTERVIEW
   OFFER
   REJECTED
   WITHDRAWN
+  HIRED
 }
+
 
 enum ApplicationMethod {
   AUTO
@@ -173,7 +180,7 @@ model Application {
   job_id             String
   resume_id          String
   match_id           String?
-  status             ApplicationStatus @default(QUEUED)
+  status             ApplicationStatus @default(DRAFT)
   applied_at         DateTime?
   cover_letter       String?           @db.Text
   application_method ApplicationMethod @default(MANUAL)
@@ -181,6 +188,9 @@ model Application {
   notes              String?           @db.Text
   follow_up_date     DateTime?
   screenshot_url     String?
+  answers            Json?
+  form_data          Json?
+  resume_url         String?
   created_at         DateTime          @default(now())
   updated_at         DateTime          @updatedAt
 

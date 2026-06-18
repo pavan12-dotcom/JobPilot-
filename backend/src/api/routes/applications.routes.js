@@ -62,7 +62,7 @@ router.patch(
   authenticate,
   validate({
     body: z.object({
-      status: z.enum(['QUEUED', 'APPLYING', 'APPLIED', 'FAILED', 'INTERVIEW', 'OFFER', 'REJECTED', 'WITHDRAWN']),
+      status: z.enum(['DRAFT', 'QUEUED', 'APPLYING', 'APPLIED', 'READY_FOR_REVIEW', 'SUBMITTED', 'FAILED', 'NEEDS_REVIEW', 'WAITING_FOR_VERIFICATION', 'INTERVIEW', 'OFFER', 'REJECTED', 'WITHDRAWN', 'HIRED']),
       notes: z.string().optional(),
       follow_up_date: z.string().optional(),
     }),
@@ -100,6 +100,67 @@ router.delete(
   asyncHandler(async (req, res) => {
     const updated = await applicationService.updateStatus(req.params.id, req.user.id, 'WITHDRAWN');
     res.json({ success: true, message: 'Application withdrawn', data: updated });
+  }),
+);
+
+// PUT /api/applications/:id/draft — Edit draft application data
+router.put(
+  '/:id/draft',
+  authenticate,
+  validate({
+    body: z.object({
+      answers: z.array(
+        z.object({
+          question: z.string(),
+          answer: z.string(),
+          selector: z.string().optional(),
+        })
+      ).optional(),
+      form_data: z.record(z.any()).optional(),
+      cover_letter: z.string().optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const updated = await applicationService.updateDraft(req.params.id, req.user.id, req.body);
+    res.json({ success: true, data: updated });
+  }),
+);
+
+// POST /api/applications/:id/approve — Approve a draft application
+router.post(
+  '/:id/approve',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const updated = await applicationService.approveApplication(req.params.id, req.user.id);
+    res.json({ success: true, data: updated });
+  }),
+);
+
+// POST /api/applications/:id/solve-captcha — Solve captcha and resume submission
+router.post(
+  '/:id/solve-captcha',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const application = await prisma.application.findFirst({
+      where: { id: req.params.id, user_id: req.user.id },
+    });
+
+    if (!application) throw ApiError.notFound('Application not found');
+    if (application.status !== 'WAITING_FOR_VERIFICATION') {
+      throw ApiError.badRequest('Application is not waiting for captcha resolution');
+    }
+
+    const updated = await applicationService.updateStatus(req.params.id, req.user.id, 'QUEUED');
+
+    const { getAutoApplyQueue } = require('../../queues/autoApply.queue');
+    const autoApplyQueue = getAutoApplyQueue();
+    await autoApplyQueue.add(
+      'submit',
+      { applicationId: req.params.id },
+      { attempts: 2, backoff: 10000 }
+    );
+
+    res.json({ success: true, data: updated });
   }),
 );
 

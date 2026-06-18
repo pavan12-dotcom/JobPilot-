@@ -129,12 +129,16 @@ app.use(errorHandler);
 
 // ── Start Server ─────────────────────────────────────────────
 async function startServer() {
-  app.listen(env.PORT, () => {
+  const server = app.listen(env.PORT, () => {
     logger.info(`🚀 ApplyAI Backend running on port ${env.PORT}`);
     logger.info(`   Environment: ${env.NODE_ENV}`);
     logger.info(`   Health: http://localhost:${env.PORT}/health`);
     logger.info(`   Queue UI: http://localhost:${env.PORT}/admin/queues`);
   });
+
+  // Attach WebSocket server
+  const { initWebSocketServer } = require('./services/websocket.service');
+  initWebSocketServer(server);
 
   // Initialize workers (non-blocking to server startup)
   (async () => {

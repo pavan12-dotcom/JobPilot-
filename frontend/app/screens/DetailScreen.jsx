@@ -1,8 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { jobsApi } from '@/lib/api';
-
-const TABS = ['About', 'Requirements', 'ATS Report', 'Company'];
+import { useState, useEffect } from 'react';
+import { jobsApi, applicationsApi } from '@/lib/api';
 
 const getRoleType = (titleText) => {
   const lower = (titleText || '').toLowerCase();
@@ -19,14 +17,58 @@ const getRoleType = (titleText) => {
 };
 
 export default function DetailScreen({ back, showToast, selectedJob }) {
-  const [activeTab, setActiveTab] = useState('About');
-  const [applying, setApplying] = useState(false);
-  const [saved, setSaved] = useState(selectedJob?.is_saved || false);
-
   const match = selectedJob || {};
   const job = match.job || {};
   const applyUrl = job.apply_url || '';
   const app = match.application || {};
+
+  const [activeTab, setActiveTab] = useState('About');
+  const [applying, setApplying] = useState(false);
+  const [saved, setSaved] = useState(selectedJob?.is_saved || false);
+  const [logs, setLogs] = useState([]);
+  const [appStatus, setAppStatus] = useState(app.status || null);
+
+  const tabs = app.id 
+    ? ['About', 'Requirements', 'ATS Report', 'App Logs', 'Company'] 
+    : ['About', 'Requirements', 'ATS Report', 'Company'];
+
+  useEffect(() => {
+    if (app.id) {
+      applicationsApi.getById(app.id).then((res) => {
+        setLogs(res?.data?.logs || []);
+        setAppStatus(res?.data?.status || app.status);
+      }).catch(() => {});
+    }
+  }, [app.id]);
+
+  useEffect(() => {
+    if (!app.id) return;
+
+    const handleLogAdded = (e) => {
+      const { applicationId, log } = e.detail || {};
+      if (applicationId === app.id && log) {
+        setLogs((prev) => {
+          if (prev.some((l) => l.id === log.id)) return prev;
+          return [...prev, log];
+        });
+      }
+    };
+
+    const handleStatusUpdated = (e) => {
+      const { applicationId, status } = e.detail || {};
+      if (applicationId === app.id) {
+        setAppStatus(status);
+      }
+    };
+
+    window.addEventListener('jobpilot:application-log-added', handleLogAdded);
+    window.addEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+
+    return () => {
+      window.removeEventListener('jobpilot:application-log-added', handleLogAdded);
+      window.removeEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+    };
+  }, [app.id]);
   const reasons = match.match_reasons || {};
   const score = match.match_score || null;
 
@@ -187,7 +229,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
         <div className="det-body">
           {/* Tabs */}
           <div className="dtabs">
-            {TABS.map((t) => (
+            {tabs.map((t) => (
               <div key={t} className={`dtab ${activeTab === t ? 'active' : ''}`} onClick={() => setActiveTab(t)}>{t}</div>
             ))}
           </div>
@@ -357,6 +399,70 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                   <div className="sp" />
                 </>
               )}
+            </div>
+          )}
+
+          {/* App Logs tab */}
+          {activeTab === 'App Logs' && (
+            <div>
+              <div className="ds-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Application Progress</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)', background: 'var(--lime-dim)', border: '1px solid var(--border2)', padding: '3px 10px', borderRadius: 999 }}>
+                  {appStatus}
+                </span>
+              </div>
+              
+              {/* Terminal View */}
+              <div style={{
+                background: '#0B0B0F',
+                border: '1.5px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '16px',
+                fontFamily: 'Courier New, monospace',
+                fontSize: '11px',
+                color: '#D1D5DB',
+                minHeight: '220px',
+                maxHeight: '350px',
+                overflowY: 'auto',
+                boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.5)',
+                marginBottom: '20px'
+              }}>
+                <div style={{ color: '#4ADE80', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80', animation: appStatus === 'APPLYING' || appStatus === 'QUEUED' ? 'ping 1.2s infinite' : 'none' }} />
+                  <span>JOBPILOT AUTOMATION CONSOLE</span>
+                </div>
+                
+                {logs.length === 0 ? (
+                  <div style={{ color: 'var(--text3)', fontStyle: 'italic', padding: '12px 0' }}>
+                    Initializing connection... Log stream will start shortly.
+                  </div>
+                ) : (
+                  logs.map((logLine, idx) => (
+                    <div key={logLine.id || idx} style={{ marginBottom: '6px', lineHeight: '1.4' }}>
+                      <span style={{ color: 'var(--lime)', marginRight: '6px' }}>&gt;</span>
+                      <span style={{ color: '#888', marginRight: '6px' }}>
+                        [{new Date(logLine.created_at).toLocaleTimeString()}]
+                      </span>
+                      <span>{logLine.event}</span>
+                      {logLine.metadata && Object.keys(logLine.metadata).length > 0 && (
+                        <div style={{ color: '#6B7280', fontSize: '10px', paddingLeft: '14px', marginTop: '2px' }}>
+                          {JSON.stringify(logLine.metadata)}
+                        </div>
+                      )}
+                      {logLine.screenshot_url && (
+                        <div style={{ marginTop: '6px', paddingLeft: '14px' }}>
+                          <img 
+                            src={logLine.screenshot_url} 
+                            alt="Log Screenshot" 
+                            style={{ maxWidth: '100%', borderRadius: '6px', border: '1px solid #374151' }} 
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="sp" />
             </div>
           )}
 

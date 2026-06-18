@@ -6,7 +6,7 @@ const logger = require('../../utils/logger');
 /**
  * Apply to a job via LinkedIn Easy Apply
  */
-async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
+async function applyOnLinkedIn(page, { resumeData, coverLetter, localResumePath, onLog }) {
   const log = onLog || (() => {});
 
   try {
@@ -40,8 +40,9 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
       if (newPage) {
         await log('LinkedIn: External apply detected. Transitioning to generic AI form filler...');
         await newPage.waitForLoadState('domcontentloaded');
+        await humanDelay(4000, 6000); // Wait for SPA hydration
         const { applyGeneric } = require('./generic');
-        return await applyGeneric(newPage, { resumeData, coverLetter, onLog });
+        return await applyGeneric(newPage, { resumeData, coverLetter, localResumePath, onLog });
       }
     }
 
@@ -56,6 +57,14 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
       // Check for CAPTCHA
       const hasCaptcha = await detectCaptcha(page);
       if (hasCaptcha) return { success: false, error: 'CAPTCHA detected mid-apply' };
+
+      // Upload resume if file input is visible
+      const fileInput = await page.$('input[type="file"]');
+      if (fileInput && await fileInput.isVisible() && localResumePath) {
+        await fileInput.setInputFiles(localResumePath);
+        await log('LinkedIn: Uploaded resume file');
+        await humanDelay(1500, 2500);
+      }
 
       // Fill contact info if present
       await fillLinkedInField(page, 'input[id*="phoneNumber"], input[name*="phone"]', resumeData.phone || '');

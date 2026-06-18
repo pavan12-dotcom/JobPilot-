@@ -1,5 +1,6 @@
 const { launchBrowser, createStealthPage, humanDelay } = require('./src/automation/browser');
 const { applyOnLinkedIn } = require('./src/automation/sites/linkedin');
+const path = require('path');
 const prisma = require('./src/db/prisma');
 
 async function run() {
@@ -21,12 +22,29 @@ async function run() {
   console.log(`Skills:         ${resumeData.skills.slice(0, 5).join(', ')}`);
   console.log(`Phone:          ${resumeData.phone || '+91 9876543210'}`);
 
+  // Create mock resume file path for testing uploads
+  const fs = require('fs');
+  const os = require('os');
+  const localResumePath = path.join(os.tmpdir(), 'mock-resume.pdf');
+  if (!fs.existsSync(localResumePath)) {
+    const dummyPdfContent = Buffer.from(
+      '%PDF-1.4\n' +
+      '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n' +
+      '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n' +
+      '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << >> /Contents 4 0 R >>\nendobj\n' +
+      '4 0 obj\n<< /Length 12 >>\nstream\nBT /F1 12 Tf ET\nendstream\nendobj\n' +
+      'xref\n0 5\n0000000000 65535 f \n0000000009 00000 n \n0000000056 00000 n \n0000000111 00000 n \n0000000212 00000 n \n' +
+      'trailer\n<< /Size 5 /Root 1 0 R >>\n' +
+      'startxref\n274\n%%EOF'
+    );
+    fs.writeFileSync(localResumePath, dummyPdfContent);
+  }
+
   // 2. Select a target LinkedIn Job URL
   const jobUrl = 'https://www.linkedin.com/jobs/view/4426956543'; // Swiggy - SDE III
   console.log(`\nNavigating to:  ${jobUrl}`);
 
   const { chromium } = require('playwright');
-  const path = require('path');
   const userSessionDir = path.join(__dirname, '.browser-session');
 
   let context;
@@ -105,6 +123,7 @@ async function run() {
     const result = await applyOnLinkedIn(page, {
       resumeData,
       coverLetter: 'Dear hiring manager, I am very excited to apply for this role. I have over 3 years of software engineering experience focusing on building APIs with Node.js and React.',
+      localResumePath,
       onLog: (msg) => console.log(`  🤖 [Playwright Log] ${msg}`)
     });
 
@@ -113,6 +132,16 @@ async function run() {
       console.log(`Method: ${result.method}`);
     } else {
       console.log(`\n🔴 Application stopped: ${result.error}`);
+      try {
+        const pages = context.pages();
+        for (let i = 0; i < pages.length; i++) {
+          const screenshotPath = path.join(__dirname, `test-error-page-${i}.png`);
+          await pages[i].screenshot({ path: screenshotPath });
+          console.log(`📸 Error screenshot for page ${i} (${pages[i].url()}) saved to ${screenshotPath}`);
+        }
+      } catch (e) {
+        console.log('Failed to capture error screenshots:', e.message);
+      }
     }
 
   } catch (err) {

@@ -13,6 +13,7 @@ import NotificationsScreen from './screens/NotificationsScreen';
 import PermissionScreen from './screens/PermissionScreen';
 import { supabase } from '@/lib/supabase';
 import { authApi } from '@/lib/api';
+import wsClient from '@/lib/websocket';
 
 const NO_NAV = ['splash', 'login', 'onboarding', 'detail', 'notifications', 'permissions'];
 const MAIN_TABS = ['home', 'search', 'saved', 'profile'];
@@ -32,6 +33,45 @@ export default function JobPilotApp() {
   const hist = useRef(['splash']);
   const goToRef = useRef(null);
   const lastBackTimeRef = useRef(0);
+
+  // Sync WebSocket connection with active user session
+  useEffect(() => {
+    const token = typeof window !== 'undefined' && localStorage.getItem('applyai_token');
+    if (user && token) {
+      wsClient.connect(token);
+      return () => {
+        wsClient.disconnect();
+      };
+    } else {
+      wsClient.disconnect();
+    }
+  }, [user]);
+
+  // WebSocket global toast events
+  useEffect(() => {
+    const handleJobMatched = (e) => {
+      const { score, job } = e.detail || {};
+      if (job) {
+        showToast(`🎯 New match: ${score}% match score for ${job.title} at ${job.company}!`);
+      }
+    };
+
+    const handleStatusUpdated = (e) => {
+      const { status, application } = e.detail || {};
+      const job = application?.job || {};
+      if (job?.title) {
+        showToast(`🚀 Status: ${status} for ${job.title} at ${job.company}`);
+      }
+    };
+
+    window.addEventListener('jobpilot:job-matched', handleJobMatched);
+    window.addEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+
+    return () => {
+      window.removeEventListener('jobpilot:job-matched', handleJobMatched);
+      window.removeEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+    };
+  }, []);
 
 
   // Mount check + detect OAuth callback (PKCE uses ?code= query param)
@@ -541,6 +581,7 @@ export default function JobPilotApp() {
         .si-bdg{padding:4px 10px;border-radius:var(--radius-full);font-size:10px;font-weight:700;flex-shrink:0}
         .b-new{background:rgba(96,165,250,0.12);color:#93C5FD}
         .b-app{background:rgba(251,191,36,0.12);color:#FCD34D}
+        .b-rev{background:rgba(249,115,22,0.12);color:#FB923C}
         .b-int{background:rgba(34,197,94,0.12);color:#4ADE80}
         .b-clo{background:rgba(248,113,113,0.12);color:#FCA5A5}
         .prof-hero{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 20px 22px;text-align:center}
