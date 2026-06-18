@@ -1,5 +1,5 @@
 // frontend/public/sw.js
-const CACHE_NAME = 'jobpilot-cache-v5';
+const CACHE_NAME = 'jobpilot-cache-v6';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
@@ -25,26 +25,42 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// ── Fetch: network-first for API, cache-first for assets ─────────────────────
+// ── Fetch: network-first for navigation, stale-while-revalidate for assets ────
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
   // Skip Next.js HMR websocket and API calls
   if (e.request.url.includes('/_next/webpack-hmr') || e.request.url.includes('/api/')) return;
 
+  // 1. Network-First for HTML navigation pages to guarantee UI updates
+  if (e.request.mode === 'navigate' || e.request.headers.get('accept')?.includes('text/html')) {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res && res.status === 200) {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request) || caches.match('/'))
+    );
+    return;
+  }
+
+  // 2. Stale-While-Revalidate for other static JS, CSS, and media assets
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request).then((res) => {
-        if (!res || res.status !== 200 || res.type !== 'basic') return res;
-        const clone = res.clone();
-        caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
-        return res;
-      }).catch(() => {
-        // Offline fallback for navigation requests
-        if (e.request.mode === 'navigate') {
-          return caches.match('/');
-        }
-      });
+      const networkFetch = fetch(e.request)
+        .then((res) => {
+          if (res && res.status === 200 && res.type === 'basic') {
+            const clone = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(e.request, clone));
+          }
+          return res;
+        })
+        .catch(() => {});
+
+      return cached || networkFetch;
     })
   );
 });
