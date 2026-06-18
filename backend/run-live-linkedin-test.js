@@ -25,11 +25,38 @@ async function run() {
   const jobUrl = 'https://www.linkedin.com/jobs/view/4426956543'; // Swiggy - SDE III
   console.log(`\nNavigating to:  ${jobUrl}`);
 
-  let browser;
+  const { chromium } = require('playwright');
+  const path = require('path');
+  const userSessionDir = path.join(__dirname, '.browser-session');
+
+  let context;
   try {
-    // 3. Launch browser in visible windowed mode
-    browser = await launchBrowser(false);
-    const page = await createStealthPage(browser);
+    // 3. Launch persistent browser context to remember login sessions!
+    console.log('Launching browser with persistent context...');
+    context = await chromium.launchPersistentContext(userSessionDir, {
+      headless: false,
+      viewport: { width: 1280, height: 800 },
+      locale: 'en-IN',
+      timezoneId: 'Asia/Kolkata',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-infobars',
+      ],
+      extraHTTPHeaders: {
+        'Accept-Language': 'en-IN,en-GB;q=0.9,en;q=0.8',
+      },
+    });
+
+    // Remove webdriver flag
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-IN', 'en'] });
+    });
+
+    const page = context.pages()[0] || await context.newPage();
     await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
 
     // 4. Interactive Login Wall Detection
@@ -93,8 +120,8 @@ async function run() {
   } finally {
     console.log('\nKeeping the browser open for 10 seconds so you can see the result...');
     await humanDelay(10000, 10000);
-    if (browser) {
-      await browser.close().catch(() => {});
+    if (context) {
+      await context.close().catch(() => {});
     }
     process.exit(0);
   }
