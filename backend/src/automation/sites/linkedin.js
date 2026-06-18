@@ -12,18 +12,40 @@ async function applyOnLinkedIn(page, { resumeData, coverLetter, onLog }) {
   try {
     await log('LinkedIn: Looking for Easy Apply button');
 
-    // Find Easy Apply button
-    const easyApplyBtn = await page.$('button.jobs-apply-button, [aria-label*="Easy Apply"]');
+    // Find Apply or Easy Apply button (support both link and button tags)
+    const easyApplyBtn = await page.$('a.jobs-apply-button, button.jobs-apply-button, [aria-label*="Easy Apply"], [aria-label*="Apply on company website"]');
     if (!easyApplyBtn) {
-      return { success: false, error: 'Easy Apply button not found' };
+      return { success: false, error: 'Apply button not found' };
     }
 
     await humanDelay(500, 1000);
+    
+    // Listen for new tab popups
+    const newPagePromise = page.context().waitForEvent('page', { timeout: 8000 }).catch(() => null);
+    
     await easyApplyBtn.click();
-    await log('LinkedIn: Clicked Easy Apply');
+    await log('LinkedIn: Clicked Apply button');
 
-    // Wait for modal
-    await page.waitForSelector('.jobs-easy-apply-modal', { timeout: 10000 });
+    // Check if a standard LinkedIn Easy Apply modal opens, or if we are redirected
+    let isEasyApply = true;
+    try {
+      await page.waitForSelector('.jobs-easy-apply-modal', { timeout: 5000 });
+    } catch {
+      isEasyApply = false;
+    }
+
+    if (!isEasyApply) {
+      // It's an external job post redirecting to a company site
+      const newPage = await newPagePromise || page.context().pages()[1];
+      if (newPage) {
+        await log('LinkedIn: External apply detected. Transitioning to generic AI form filler...');
+        await newPage.waitForLoadState('domcontentloaded');
+        const { applyGeneric } = require('./generic');
+        return await applyGeneric(newPage, { resumeData, coverLetter, onLog });
+      }
+    }
+
+    // Wait for modal transition
     await humanDelay(1000, 2000);
 
     // Process multi-step form
