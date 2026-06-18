@@ -35,9 +35,9 @@ async function detectCaptcha(page) {
       }
     }
 
-    // Check page text for CAPTCHA keywords
-    const content = await page.content();
-    const captchaKeywords = ['captcha', 'robot', 'human verification', 'security check', 'prove you are human'];
+    // Check human-visible page text for CAPTCHA keywords
+    const content = await page.innerText('body').catch(() => '');
+    const captchaKeywords = ['captcha', 'human verification', 'security check', 'prove you are human'];
     for (const keyword of captchaKeywords) {
       if (content.toLowerCase().includes(keyword)) {
         logger.warn(`🚨 CAPTCHA keyword detected: "${keyword}"`);
