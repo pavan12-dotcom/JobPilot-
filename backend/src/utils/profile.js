@@ -5,6 +5,7 @@ async function getProfileCompletion(userId) {
     where: { id: userId },
     include: {
       preferences: true,
+      profile: true,
       resumes: { where: { is_active: true }, take: 1 },
     },
   });
@@ -42,67 +43,74 @@ async function getProfileCompletion(userId) {
     missing.push('Preferred Location');
   }
 
-  // Resume checks
+  // Resume check
   const activeResume = user.resumes[0];
+  const profile = user.profile;
+
   if (activeResume) {
     filledFields++; // Resume file uploaded
-    
-    const p = activeResume.parsed_data || {};
-    
-    // 5. Phone Number
-    if (p.phone && p.phone.trim()) {
-      filledFields++;
-    } else {
-      missing.push('Phone Number');
-    }
-
-    // 6. LinkedIn URL
-    const linkedin = p.linkedin_url || p.linkedin;
-    if (linkedin && linkedin.trim()) {
-      filledFields++;
-    } else {
-      missing.push('LinkedIn URL');
-    }
-
-    // 7. GitHub URL
-    const github = p.github_url || p.github;
-    if (github && github.trim()) {
-      filledFields++;
-    } else {
-      missing.push('GitHub URL');
-    }
-
-    // 8. Portfolio URL
-    const portfolio = p.portfolio_url || p.portfolio;
-    if (portfolio && portfolio.trim()) {
-      filledFields++;
-    } else {
-      missing.push('Portfolio URL');
-    }
-
-    // 9. Current Location
-    const currentLoc = p.current_location || p.location;
-    if (currentLoc && currentLoc.trim()) {
-      filledFields++;
-    } else {
-      missing.push('Current Location');
-    }
-
-    // 10. Skills
-    if (p.skills && Array.isArray(p.skills) && p.skills.length > 0) {
-      filledFields++;
-    } else {
-      missing.push('Skills');
-    }
-
-    // 11. Cover Letter
-    if (p.cover_letter && p.cover_letter.trim()) {
-      filledFields++;
-    } else {
-      missing.push('Cover Letter');
-    }
   } else {
-    missing.push('Resume File Uploaded', 'Phone Number', 'LinkedIn URL', 'GitHub URL', 'Portfolio URL', 'Current Location', 'Skills', 'Cover Letter');
+    missing.push('Resume File Uploaded');
+  }
+
+  // 5. Phone Number
+  const phoneVal = profile?.phone || activeResume?.parsed_data?.phone;
+  if (phoneVal && phoneVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('Phone Number');
+  }
+
+  // 6. LinkedIn URL
+  const linkedinVal = profile?.linkedin_url || activeResume?.parsed_data?.linkedin_url || activeResume?.parsed_data?.linkedin;
+  if (linkedinVal && linkedinVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('LinkedIn URL');
+  }
+
+  // 7. GitHub URL
+  const githubVal = profile?.github_url || activeResume?.parsed_data?.github_url || activeResume?.parsed_data?.github;
+  if (githubVal && githubVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('GitHub URL');
+  }
+
+  // 8. Portfolio URL
+  const portfolioVal = profile?.portfolio_url || activeResume?.parsed_data?.portfolio_url || activeResume?.parsed_data?.portfolio;
+  if (portfolioVal && portfolioVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('Portfolio URL');
+  }
+
+  // 9. Current Location
+  const currentLocVal = (profile?.city || profile?.state || profile?.country)
+    ? `${profile.city || ''} ${profile.state || ''} ${profile.country || ''}`.trim()
+    : (activeResume?.parsed_data?.current_location || activeResume?.parsed_data?.location);
+  if (currentLocVal && currentLocVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('Current Location');
+  }
+
+  // 10. Skills
+  const skillsVal = (profile?.skills && profile.skills.length > 0)
+    ? profile.skills
+    : activeResume?.parsed_data?.skills;
+  if (skillsVal && Array.isArray(skillsVal) && skillsVal.length > 0) {
+    filledFields++;
+  } else {
+    missing.push('Skills');
+  }
+
+  // 11. Cover Letter
+  const coverLetterVal = profile?.cover_letter_template || activeResume?.parsed_data?.cover_letter;
+  if (coverLetterVal && coverLetterVal.trim()) {
+    filledFields++;
+  } else {
+    missing.push('Cover Letter');
   }
 
   const percent = Math.round((filledFields / 12) * 100);

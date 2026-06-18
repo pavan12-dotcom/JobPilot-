@@ -110,4 +110,9 @@ export const notificationsApi = {
   subscribe: (subscription) => api.post('/notifications/subscribe', subscription),
 };
 
+export const profileApi = {
+  get: () => api.get('/profile'),
+  update: (data) => api.post('/profile', data),
+};
+
 export default api;

@@ -76,6 +76,7 @@ model User {
   updated_at      DateTime @updatedAt
 
   // Relations
+  profile         Profile?
   resumes         Resume[]
   preferences     Preference?
   job_matches     JobMatch[]
@@ -248,5 +249,39 @@ model PushSubscription {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("push_subscriptions")
+}
+
+model Profile {
+  id                    String   @id @default(uuid())
+  user_id               String   @unique
+  phone                 String?
+  country               String?
+  state                 String?
+  city                  String?
+  linkedin_url          String?
+  github_url            String?
+  portfolio_url         String?
+  current_title         String?
+  years_experience      Int?
+  skills                String[] @default([])
+  projects              Json?    // Array of project details
+  certifications        String[] @default([])
+  education             Json?    // Array of education details
+  previous_companies    String[] @default([])
+  expected_salary       Int?
+  notice_period         String?
+  preferred_industries  String[] @default([])
+  work_authorization    String?
+  visa_status           String?
+  sponsorship_required  Boolean  @default(false)
+  relocation_preference String?
+  cover_letter_template String?  @db.Text
+  certificates_urls     String[] @default([])
+  portfolio_files_urls  String[] @default([])
+
+  // Relations
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
 }
 

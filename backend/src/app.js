@@ -21,6 +21,7 @@ const applicationsRoutes = require('./api/routes/applications.routes');
 const schedulesRoutes = require('./api/routes/schedules.routes');
 const dashboardRoutes = require('./api/routes/dashboard.routes');
 const notificationsRoutes = require('./api/routes/notifications.routes');
+const profileRoutes = require('./api/routes/profile.routes');
 
 
 const app = express();
@@ -117,6 +118,7 @@ app.use('/api/applications', applicationsRoutes);
 app.use('/api/schedules', schedulesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/profile', profileRoutes);
 
 
 // 404 handler
