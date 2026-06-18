@@ -162,9 +162,9 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   const [recruiterVisibility, setRecruiterVisibility] = useState(true);
   const [incognitoMode, setIncognitoMode] = useState(false);
 
-  const name = user?.name || 'Arun Reddy';
-  const email = user?.email || 'demo@jobpilot.dev';
-  const initials = name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+  const name = user?.name || 'Loading...';
+  const email = user?.email || 'Loading...';
+  const initials = name && name !== 'Loading...' ? name.split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'AR';
 
   useEffect(() => {
     loadData();
@@ -297,39 +297,64 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   async function handleSaveProfile() {
     setSavingProfile(true);
     try {
-      // 1. Update User Details (Name, Email, Daily Apply Limit)
-      const uRes = await authApi.updateProfile({
+      const profileData = {
         name: profileName,
         email: profileEmail,
         daily_apply_limit: Number(dailyLimit),
-      });
+      };
 
-      if (uRes.success) {
+      const parsedDataUpdate = {
+        name: profileName,
+        email: profileEmail,
+        phone: profilePhone,
+        linkedin_url: linkedinUrl,
+        github_url: githubUrl,
+        portfolio_url: portfolioUrl,
+        current_location: currentLocation,
+        skills: skills,
+        current_role: currentRole,
+        cover_letter: coverLetter,
+      };
+
+      // 1. Run profile and resume updates in parallel
+      const updatePromises = [
+        authApi.updateProfile(profileData)
+      ];
+
+      if (resume && resume.id) {
+        updatePromises.push(
+          resumeApi.update(resume.id, { parsed_data: parsedDataUpdate })
+        );
+      }
+
+      const [uRes] = await Promise.all(updatePromises);
+
+      // 2. Optimistic update to React state immediately
+      if (uRes && uRes.success) {
         setUser(uRes.data);
         localStorage.setItem('applyai_user', JSON.stringify(uRes.data));
       }
 
-      // 2. Update Active Resume Fields (parsed_data)
-      if (resume && resume.id) {
-        await resumeApi.update(resume.id, {
+      if (resume) {
+        setResume({
+          ...resume,
           parsed_data: {
-            name: profileName,
-            email: profileEmail,
-            phone: profilePhone,
-            linkedin_url: linkedinUrl,
-            github_url: githubUrl,
-            portfolio_url: portfolioUrl,
-            current_location: currentLocation,
-            skills: skills,
-            current_role: currentRole,
-            cover_letter: coverLetter,
+            ...resume.parsed_data,
+            ...parsedDataUpdate
           }
+        });
+      }
+
+      // Also update overall stats for Experience and Role immediately
+      if (stats) {
+        setStats({
+          ...stats,
+          // Sync stats values if needed
         });
       }
 
       showToast('Profile updated successfully!');
       setSubView('main');
-      await loadData();
     } catch (err) {
       showToast(err.message || 'Failed to update profile');
     } finally {
@@ -341,7 +366,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   async function handleSavePrefs() {
     setSavingPrefs(true);
     try {
-      await preferencesApi.update({
+      const updatedPrefs = {
         target_roles: targetRoles,
         target_locations: targetLocations,
         min_salary: minSalary ? Number(minSalary) : null,
@@ -351,11 +376,15 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
         auto_apply_enabled: autoApplyEnabled,
         min_match_score: Number(minMatchScore),
         blacklisted_companies: blacklistedCompanies,
-      });
+      };
+
+      await preferencesApi.update(updatedPrefs);
+      
+      // Update state locally immediately
+      setPrefs(updatedPrefs);
 
       showToast('Preferences updated successfully!');
       setSubView('main');
-      await loadData();
     } catch (err) {
       showToast(err.message || 'Failed to update preferences');
     } finally {
