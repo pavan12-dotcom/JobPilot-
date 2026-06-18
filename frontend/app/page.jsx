@@ -136,26 +136,37 @@ export default function JobPilotApp() {
 
   // Live clock & SW/PWA Registration
   useEffect(() => {
+    const cleanups = [];
+
     // Service Worker Registration
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      const registerSW = () => {
         navigator.serviceWorker.register('/sw.js').then((reg) => {
           console.log('SW registered:', reg);
           // Force check for updates on load
-          reg.update();
+          reg.update().catch((err) => console.warn('SW update check failed:', err));
         }).catch((err) => {
           console.error('SW registration failed:', err);
         });
-      });
+      };
+
+      if (document.readyState === 'complete') {
+        registerSW();
+      } else {
+        window.addEventListener('load', registerSW);
+        cleanups.push(() => window.removeEventListener('load', registerSW));
+      }
 
       // Reload page immediately when a new SW controller takes over
       let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const handleControllerChange = () => {
         if (!refreshing) {
           refreshing = true;
           window.location.reload();
         }
-      });
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+      cleanups.push(() => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange));
     }
 
     // Listen for PWA installation prompt
@@ -174,6 +185,7 @@ export default function JobPilotApp() {
     return () => {
       clearInterval(id);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      cleanups.forEach(c => c());
     };
   }, []);
 
