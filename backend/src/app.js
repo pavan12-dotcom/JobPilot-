@@ -157,6 +157,59 @@ async function startServer() {
       logger.info('✅ All workers registered');
     } catch (err) {
       logger.error('Workers not started (Redis may not be available):', err.message);
+
+      // FALLBACK: If Redis is unavailable, start a setInterval loop to fetch & match jobs every hour
+      logger.info('⏰ Starting local fallback setInterval loop for hourly fetches');
+      setInterval(async () => {
+        logger.info('⏰ Running fallback periodic hourly job fetch');
+        try {
+          const prisma = require('./db/prisma');
+          const jobService = require('./services/job.service');
+          const users = await prisma.user.findMany({
+            include: { preferences: true },
+            where: { preferences: { isNot: null } },
+          });
+          
+          for (const user of users) {
+            if (!user.preferences) continue;
+            const resume = await prisma.resume.findFirst({ where: { user_id: user.id, is_active: true } });
+            if (!resume || !resume.parsed_data) continue;
+            
+            await jobService.fetchJobsForUser(user.preferences);
+            
+            // Score unmatched jobs
+            const unmatched = await prisma.job.findMany({
+              where: {
+                is_active: true,
+                job_matches: {
+                  none: {
+                    user_id: user.id,
+                  },
+                },
+              },
+              take: 20,
+            });
+            
+            const { scoreJobMatch } = require('./ai/jobMatcher');
+            for (const j of unmatched) {
+              try {
+                const matchResult = await scoreJobMatch(resume.parsed_data, j);
+                await prisma.jobMatch.create({
+                  data: {
+                    user_id: user.id,
+                    job_id: j.id,
+                    resume_id: resume.id,
+                    match_score: matchResult.match_score,
+                    match_reasons: matchResult,
+                  },
+                });
+              } catch (matchErr) {}
+            }
+          }
+        } catch (fetchErr) {
+          logger.error('Fallback periodic fetch failed:', fetchErr.message);
+        }
+      }, 60 * 60 * 1000); // 1 hour
     }
   })();
 }

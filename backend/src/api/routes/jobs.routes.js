@@ -165,7 +165,43 @@ router.post(
       await jobFetchQueue.add('fetch', { userId: req.user.id, preferences: prefs }, { jobId: `refresh-${req.user.id}` });
     } catch {
       // Fallback: fetch synchronously
+      const logger = require('../../utils/logger');
+      logger.info('⚠️ Queue system offline. Running job fetch & matching synchronously...');
       await jobService.fetchJobsForUser(prefs);
+
+      // Trigger matching synchronously
+      const resume = await resumeService.getActiveResume(req.user.id);
+      if (resume && resume.parsed_data) {
+        const unmatchedJobs = await prisma.job.findMany({
+          where: {
+            is_active: true,
+            job_matches: {
+              none: {
+                user_id: req.user.id,
+              },
+            },
+          },
+          take: 30,
+        });
+
+        const { scoreJobMatch } = require('../../ai/jobMatcher');
+        for (const job of unmatchedJobs) {
+          try {
+            const matchResult = await scoreJobMatch(resume.parsed_data, job);
+            await prisma.jobMatch.create({
+              data: {
+                user_id: req.user.id,
+                job_id: job.id,
+                resume_id: resume.id,
+                match_score: matchResult.match_score,
+                match_reasons: matchResult,
+              },
+            });
+          } catch (matchErr) {
+            logger.error(`Sync match failed for job ${job.id}:`, matchErr.message);
+          }
+        }
+      }
     }
 
     res.json({ success: true, message: 'Job refresh triggered' });
