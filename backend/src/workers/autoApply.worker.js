@@ -76,10 +76,10 @@ async function processAutoApply(job) {
     // Launch browser
     await applicationService.logEvent(applicationId, 'Browser launched', {
       browser: 'Chromium',
-      headless: true,
+      headless: false,
     });
 
-    browser = await launchBrowser();
+    browser = await launchBrowser(false);
     const page = await browser.newPage();
 
     // Navigate to job page
