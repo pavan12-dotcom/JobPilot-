@@ -363,20 +363,22 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     }
   }
 
-  const s = stats || { total_applied: 12, interviews: 5, total_matched: 87 };
-  const role = resume?.parsed_data?.current_role || user?.role || 'Senior Product Designer';
-  const loc = prefs?.target_locations?.[0] || 'Hyderabad, India';
-  const experience = resume?.parsed_data?.total_years_experience || '8yr';
-  const profilePct = resume ? 90 : 55;
+  const s = stats || { total_applied: 0, interviews: 0, total_matched: 0 };
+  const role = resume?.parsed_data?.current_role || user?.role || 'Not specified';
+  const loc = prefs?.target_locations?.[0] || 'Not specified';
+  const experience = resume?.parsed_data?.total_experience_years !== undefined
+    ? `${resume.parsed_data.total_experience_years}yr`
+    : '0yr';
+  const profilePct = resume ? 95 : 30;
 
   const menuItems = [
     { icon: 'ti-user', label: 'My Profile', sub: 'Resume, skills, portfolio', badge: null, action: () => setSubView('profile') },
-    { icon: 'ti-file-text', label: 'My Applications', sub: 'Track all applications', badge: s.total_applied || '12', action: () => goTo('saved') },
-    { icon: 'ti-bell', label: 'Job Alerts', sub: '3 active alerts', badge: null, action: () => goTo('notifications') },
+    { icon: 'ti-file-text', label: 'My Applications', sub: 'Track all applications', badge: s.total_applied !== undefined ? String(s.total_applied) : '0', action: () => goTo('saved') },
+    { icon: 'ti-bell', label: 'Job Alerts', sub: 'Active job scan queue', badge: null, action: () => goTo('notifications') },
     { icon: 'ti-shield', label: 'Notification Settings', sub: 'Allow or manage alerts', badge: null, action: () => goTo('permissions') },
   ];
   const prefItems = [
-    { icon: 'ti-adjustments', label: 'Job Preferences', sub: prefs?.target_roles?.[0] ? `${prefs.target_roles[0]}, +${prefs.target_roles.length - 1}` : 'Role, salary, location', action: () => setSubView('preferences') },
+    { icon: 'ti-adjustments', label: 'Job Preferences', sub: prefs?.target_roles?.[0] ? `${prefs.target_roles[0]}${prefs.target_roles.length > 1 ? `, +${prefs.target_roles.length - 1}` : ''}` : 'Role, salary, location', action: () => setSubView('preferences') },
     { icon: 'ti-lock', label: 'Privacy', sub: 'Who can see your profile', action: () => setSubView('privacy') },
     { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@jobpilot.dev') },
   ];
@@ -839,9 +841,9 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
 
         <div className="prof-stats">
           {[
-            { v: s.total_applied || 12, l: 'Applied' },
-            { v: s.interviews || 5, l: 'Interviews' },
-            { v: s.total_matched || 87, l: 'Matched' },
+            { v: s.total_applied ?? 0, l: 'Applied' },
+            { v: s.interviews ?? 0, l: 'Interviews' },
+            { v: s.total_matched ?? 0, l: 'Matched' },
             { v: typeof experience === 'number' ? `${experience}yr` : experience, l: 'Experience' },
           ].map(({ v, l }) => (
             <div key={l} className="ps"><div className="psv">{v}</div><div className="psl">{l}</div></div>

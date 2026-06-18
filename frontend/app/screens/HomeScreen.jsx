@@ -165,14 +165,11 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
             </div>
           </div>
         ) : (
-          <div className="feat-card" onClick={() => goTo('detail')}>
-            <div className="fc-top"><div className="fc-logo">G</div><div className="fc-badge">Featured</div></div>
-            <div className="fc-title">Product Designer</div>
-            <div className="fc-co">Google · Mountain View, CA</div>
-            <div className="fc-tags"><div className="fc-tag">Remote</div><div className="fc-tag">Full-time</div><div className="fc-tag">Senior</div></div>
-            <div className="fc-bot">
-              <div className="fc-salary">$120k – $160k/yr</div>
-              <button className="fc-apply" onClick={(e) => { e.stopPropagation(); showToast('Application submitted!'); }}>Apply now</button>
+          <div className="feat-card" style={{ cursor: 'default', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 150, border: '1.5px dashed var(--border2)', background: 'transparent', boxShadow: 'none' }} onClick={(e) => e.stopPropagation()}>
+            <i className="ti ti-briefcase" style={{ fontSize: 28, color: 'var(--text3)', marginBottom: 8 }} />
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>No Job Matches Yet</div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
+              Upload your resume and adjust preferences to start receiving matching job recommendations.
             </div>
           </div>
         )}
@@ -188,21 +185,31 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
 
         {/* Activity feed */}
         <div style={{ margin: '0 20px 14px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
-          {acts.slice(0, 4).map((act, i) => {
-            const type = act.type || 'default';
-            const ic = ICON_MAP[type] || ICON_MAP.default;
-            return (
-              <div key={act.id || i} style={{ display: 'flex', gap: 12, padding: '12px 14px', borderBottom: i < 3 ? '1px solid var(--border)' : 'none', alignItems: 'flex-start' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: ic.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <i className={`ti ${ic.icon}`} style={{ fontSize: 14, color: ic.color }} />
+          {activity.length > 0 ? (
+            activity.slice(0, 4).map((act, i) => {
+              const type = act.type || 'default';
+              const ic = ICON_MAP[type] || ICON_MAP.default;
+              return (
+                <div key={act.id || i} style={{ display: 'flex', gap: 12, padding: '12px 14px', borderBottom: i < activity.length - 1 && i < 3 ? '1px solid var(--border)' : 'none', alignItems: 'flex-start' }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: ic.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <i className={`ti ${ic.icon}`} style={{ fontSize: 14, color: ic.color }} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text1)', fontWeight: 600, lineHeight: 1.4 }}>{act.message || act.description || act.title}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{timeAgo(act.created_at || act.timestamp)}</div>
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text1)', fontWeight: 600, lineHeight: 1.4 }}>{act.message || act.description || act.title}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{timeAgo(act.created_at || act.timestamp)}</div>
-                </div>
+              );
+            })
+          ) : (
+            <div style={{ display: 'flex', gap: 12, padding: '20px 14px', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', textAlign: 'center' }}>
+              <i className="ti ti-activity" style={{ fontSize: 24, color: 'var(--text3)' }} />
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>No Activity Yet</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2, maxWidth: 240, lineHeight: 1.4 }}>Match notifications and submissions will be displayed here.</div>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
 
         {/* AI insights */}

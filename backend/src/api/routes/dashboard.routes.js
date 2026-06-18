@@ -17,7 +17,7 @@ router.get(
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [totalApplied, interviews, offers, matchedToday, totalJobs, pendingToday] = await Promise.all([
+    const [totalApplied, interviews, offers, matchedToday, totalJobs, pendingToday, totalMatched] = await Promise.all([
       prisma.application.count({ where: { user_id: userId, status: 'APPLIED' } }),
       prisma.application.count({ where: { user_id: userId, status: 'INTERVIEW' } }),
       prisma.application.count({ where: { user_id: userId, status: 'OFFER' } }),
@@ -26,6 +26,7 @@ router.get(
       prisma.application.count({
         where: { user_id: userId, created_at: { gte: today }, status: { in: ['APPLIED', 'QUEUED', 'APPLYING'] } },
       }),
+      prisma.jobMatch.count({ where: { user_id: userId } }),
     ]);
 
     const successRate =
@@ -41,6 +42,7 @@ router.get(
         jobs_matched_today: matchedToday,
         applied_today: pendingToday,
         active_applications: totalJobs,
+        total_matched: totalMatched,
       },
     });
   }),
