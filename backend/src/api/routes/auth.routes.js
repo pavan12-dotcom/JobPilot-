@@ -85,7 +85,7 @@ router.patch(
     body: z.object({
       name: z.string().min(1).optional(),
       email: z.string().email().optional(),
-      daily_apply_limit: z.number().min(1).max(100).optional(),
+      daily_apply_limit: z.number().min(1).max(5).optional(),
       is_premium: z.boolean().optional(),
     }),
   }),

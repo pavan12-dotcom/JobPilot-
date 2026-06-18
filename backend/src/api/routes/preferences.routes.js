@@ -8,8 +8,11 @@ const asyncHandler = require('../../utils/asyncHandler');
 
 const router = express.Router();
 
+const { getProfileCompletion } = require('../../utils/profile');
+const ApiError = require('../../utils/ApiError');
+
 const preferencesSchema = z.object({
-  target_roles: z.array(z.string()).optional(),
+  target_roles: z.array(z.string()).max(1, 'Only one target role can be selected.').optional(),
   target_locations: z.array(z.string()).optional(),
   min_salary: z.number().nullable().optional(),
   max_salary: z.number().nullable().optional(),
@@ -30,6 +33,8 @@ router.get(
       where: { user_id: req.user.id },
     });
 
+    const completion = await getProfileCompletion(req.user.id);
+
     if (!prefs) {
       // Return defaults for new users
       return res.json({
@@ -47,10 +52,11 @@ router.get(
           auto_apply_enabled: false,
           min_match_score: 70,
         },
+        completion,
       });
     }
 
-    res.json({ success: true, data: prefs });
+    res.json({ success: true, data: prefs, completion });
   }),
 );
 
@@ -60,13 +66,24 @@ router.put(
   authenticate,
   validate({ body: preferencesSchema }),
   asyncHandler(async (req, res) => {
+    // Check profile completion if trying to turn auto apply ON
+    if (req.body.auto_apply_enabled === true) {
+      const completion = await getProfileCompletion(req.user.id);
+      if (!completion.isComplete) {
+        throw ApiError.badRequest(
+          `Profile must be 100% complete to enable Auto-Apply. Missing fields: ${completion.missing.join(', ')}`
+        );
+      }
+    }
+
     const prefs = await prisma.preference.upsert({
       where: { user_id: req.user.id },
       update: req.body,
       create: { user_id: req.user.id, ...req.body },
     });
 
-    res.json({ success: true, data: prefs });
+    const completion = await getProfileCompletion(req.user.id);
+    res.json({ success: true, data: prefs, completion });
   }),
 );
 
@@ -81,15 +98,27 @@ router.patch(
 
     const newValue = current ? !current.auto_apply_enabled : true;
 
+    // Check profile completion if trying to turn auto apply ON
+    if (newValue === true) {
+      const completion = await getProfileCompletion(req.user.id);
+      if (!completion.isComplete) {
+        throw ApiError.badRequest(
+          `Profile must be 100% complete to enable Auto-Apply. Missing fields: ${completion.missing.join(', ')}`
+        );
+      }
+    }
+
     const prefs = await prisma.preference.upsert({
       where: { user_id: req.user.id },
       update: { auto_apply_enabled: newValue },
       create: { user_id: req.user.id, auto_apply_enabled: newValue },
     });
 
+    const completion = await getProfileCompletion(req.user.id);
     res.json({
       success: true,
       data: { auto_apply_enabled: prefs.auto_apply_enabled },
+      completion,
       message: `Auto-apply ${prefs.auto_apply_enabled ? 'enabled' : 'disabled'}`,
     });
   }),

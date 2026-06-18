@@ -204,11 +204,25 @@ async function getRecommendedJobs(userId, options = {}) {
     saved_only = false,
   } = options;
 
+  const prefs = await prisma.preference.findUnique({
+    where: { user_id: userId },
+  });
+  const targetRole = prefs?.target_roles?.[0];
+
   const where = {
     user_id: userId,
     match_score: { gte: Number(min_score) },
     ...(saved_only && { is_saved: true }),
   };
+
+  if (targetRole && targetRole.trim()) {
+    where.job = {
+      OR: [
+        { title: { contains: targetRole.trim(), mode: 'insensitive' } },
+        { description: { contains: targetRole.trim(), mode: 'insensitive' } },
+      ],
+    };
+  }
 
   const matches = await prisma.jobMatch.findMany({
     where,

@@ -62,7 +62,7 @@ model User {
   supabase_id     String?  @unique
   password_hash   String?  // For local auth demo
   is_premium      Boolean  @default(false)
-  daily_apply_limit Int    @default(10)
+  daily_apply_limit Int    @default(5)
   avatar_url      String?
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt

@@ -15,12 +15,12 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
   const [roleInput, setRoleInput] = useState('');
   const [locationInput, setLocationInput] = useState('');
   const [prefs, setPrefs] = useState({
-    target_roles: ['Product Designer', 'UX Designer'],
+    target_roles: ['Product Designer'],
     target_locations: ['Remote', 'Hyderabad'],
     preferred_job_types: ['FULL_TIME', 'REMOTE'],
     min_match_score: 70,
-    daily_limit: 10,
-    auto_apply_enabled: true,
+    daily_limit: 5,
+    auto_apply_enabled: false,
   });
 
   function addTag(field, val, reset) {
@@ -152,24 +152,15 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
               <div style={{ fontSize: 12, color: 'var(--text2)' }}>Set target roles, locations & job types</div>
             </div>
 
-            {/* Target roles */}
+            {/* Target role */}
             <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Target roles</div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-                {prefs.target_roles.map((r) => <Tag key={r} label={r} onRemove={() => removeTag('target_roles', r)} />)}
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input
-                  value={roleInput}
-                  onChange={(e) => setRoleInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addTag('target_roles', roleInput, setRoleInput)}
-                  placeholder="e.g. UX Designer"
-                  style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '9px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-                />
-                <button onClick={() => addTag('target_roles', roleInput, setRoleInput)} style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', width: 36, height: 36, cursor: 'pointer', color: 'var(--lime)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <i className="ti ti-plus" />
-                </button>
-              </div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Target Role</div>
+              <input
+                value={prefs.target_roles[0] || ''}
+                onChange={(e) => setPrefs((p) => ({ ...p, target_roles: e.target.value ? [e.target.value] : [] }))}
+                placeholder="e.g. UX Designer"
+                style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '11px 16px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
+              />
             </div>
 
             {/* Locations */}
@@ -228,16 +219,16 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
             </div>
 
             {/* Auto-apply toggle */}
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.65 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Activate Automation Queue</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Applies to jobs matching your filters</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Requires 100% profile completion (activate in Settings)</div>
               </div>
               <button
-                onClick={() => setPrefs((p) => ({ ...p, auto_apply_enabled: !p.auto_apply_enabled }))}
-                style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: prefs.auto_apply_enabled ? 'var(--lime)' : 'var(--bg3)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                disabled={true}
+                style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: 'var(--bg3)', cursor: 'not-allowed', position: 'relative', flexShrink: 0 }}
               >
-                <span style={{ position: 'absolute', width: 16, height: 16, background: prefs.auto_apply_enabled ? 'var(--bg)' : 'var(--text3)', borderRadius: '50%', top: 4, left: prefs.auto_apply_enabled ? 24 : 4, transition: 'left 0.2s' }} />
+                <span style={{ position: 'absolute', width: 16, height: 16, background: 'var(--text3)', borderRadius: '50%', top: 4, left: 4 }} />
               </button>
             </div>
 
@@ -259,9 +250,9 @@ export default function OnboardingScreen({ goTo, showToast, back }) {
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Daily Limit</div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>{prefs.daily_limit} apps/day</div>
               </div>
-              <input type="range" min={1} max={20} value={prefs.daily_limit} onChange={(e) => setPrefs((p) => ({ ...p, daily_limit: +e.target.value }))} style={{ width: '100%' }} />
+              <input type="range" min={1} max={5} value={prefs.daily_limit} onChange={(e) => setPrefs((p) => ({ ...p, daily_limit: +e.target.value }))} style={{ width: '100%' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text3)', marginTop: 4, fontWeight: 600 }}>
-                <span>1/day</span><span>10/day</span><span>20/day</span>
+                <span>1/day</span><span>3/day</span><span>5/day</span>
               </div>
             </div>
 

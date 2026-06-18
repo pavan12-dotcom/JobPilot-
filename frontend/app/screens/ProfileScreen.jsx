@@ -140,7 +140,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   const [skillInput, setSkillInput] = useState('');
   const [currentRole, setCurrentRole] = useState('');
   const [coverLetter, setCoverLetter] = useState('');
-  const [dailyLimit, setDailyLimit] = useState(10);
+  const [dailyLimit, setDailyLimit] = useState(5);
   const [uploadingResume, setUploadingResume] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -161,6 +161,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   // Privacy Mock Form State
   const [recruiterVisibility, setRecruiterVisibility] = useState(true);
   const [incognitoMode, setIncognitoMode] = useState(false);
+  const [completion, setCompletion] = useState({ percent: 0, isComplete: false, missing: [] });
 
   const name = user?.name || 'Loading...';
   const email = user?.email || 'Loading...';
@@ -189,6 +190,9 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     if (prefsRes.status === 'fulfilled' && prefsRes.value?.data) {
       userPrefs = prefsRes.value.data;
       setPrefs(userPrefs);
+      if (prefsRes.value.completion) {
+        setCompletion(prefsRes.value.completion);
+      }
     }
 
     // Populate profile form state
@@ -378,10 +382,13 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
         blacklisted_companies: blacklistedCompanies,
       };
 
-      await preferencesApi.update(updatedPrefs);
+      const res = await preferencesApi.update(updatedPrefs);
       
       // Update state locally immediately
       setPrefs(updatedPrefs);
+      if (res && res.completion) {
+        setCompletion(res.completion);
+      }
 
       showToast('Preferences updated successfully!');
       setSubView('main');
@@ -549,7 +556,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
               <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Daily Limit</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>{dailyLimit} apps/day</div>
             </div>
-            <input type="range" min={1} max={25} value={dailyLimit} onChange={(e) => setDailyLimit(+e.target.value)} style={{ width: '100%' }} />
+            <input type="range" min={1} max={5} value={dailyLimit} onChange={(e) => setDailyLimit(+e.target.value)} style={{ width: '100%' }} />
           </div>
 
           {/* Cover Letter */}
@@ -635,34 +642,31 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Auto-Apply Enabled</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Allow systems to submit applications automatically</div>
+              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Requires 100% profile completion ({completion?.percent || 0}% complete)</div>
             </div>
             <button
-              onClick={() => setAutoApplyEnabled(!autoApplyEnabled)}
+              onClick={() => {
+                if (!autoApplyEnabled && (!completion || !completion.isComplete)) {
+                  showToast(`Profile is only ${completion?.percent || 0}% complete. Fill all fields to enable Auto-Apply: ${completion?.missing?.join(', ') || 'Upload resume, set social URLs, and complete details'}`);
+                  return;
+                }
+                setAutoApplyEnabled(!autoApplyEnabled);
+              }}
               style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: autoApplyEnabled ? 'var(--lime)' : 'var(--bg3)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
             >
               <span style={{ position: 'absolute', width: 16, height: 16, background: autoApplyEnabled ? 'var(--bg)' : 'var(--text3)', borderRadius: '50%', top: 4, left: autoApplyEnabled ? 24 : 4, transition: 'left 0.2s' }} />
             </button>
           </div>
 
-          {/* Target Roles */}
+          {/* Target Role */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Target Roles</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {targetRoles.map((r) => <Tag key={r} label={r} onRemove={() => removeTag(targetRoles, setTargetRoles, r)} />)}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={targetRoleInput}
-                onChange={(e) => setTargetRoleInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag(targetRoles, setTargetRoles, targetRoleInput, setTargetRoleInput)}
-                placeholder="e.g. Frontend Developer"
-                style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '9px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-              <button onClick={() => addTag(targetRoles, setTargetRoles, targetRoleInput, setTargetRoleInput)} style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', width: 36, height: 36, cursor: 'pointer', color: 'var(--lime)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-plus" />
-              </button>
-            </div>
+            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Target Role</div>
+            <input
+              value={targetRoles[0] || ''}
+              onChange={(e) => setTargetRoles(e.target.value ? [e.target.value] : [])}
+              placeholder="e.g. Frontend Developer"
+              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '11px 16px', color: 'var(--text1)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
+            />
           </div>
 
           {/* Preferred Locations */}
@@ -905,7 +909,7 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
               <i className="ti ti-zap" style={{ fontSize: 18, color: prefs.auto_apply_enabled ? 'var(--lime)' : 'var(--text3)' }} />
               <div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)' }}>Auto-Apply</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)' }}>Min score: {prefs.min_match_score}% · Limit: {user?.daily_apply_limit || prefs.daily_limit || 10}/day</div>
+                <div style={{ fontSize: 11, color: 'var(--text2)' }}>Min score: {prefs.min_match_score}% · Limit: {user?.daily_apply_limit || prefs.daily_limit || 5}/day</div>
               </div>
             </div>
             <span style={{ fontSize: 10, fontWeight: 700, color: prefs.auto_apply_enabled ? '#4ADE80' : 'var(--text3)', background: prefs.auto_apply_enabled ? 'rgba(74,222,128,0.1)' : 'var(--bg3)', border: `1px solid ${prefs.auto_apply_enabled ? 'rgba(74,222,128,0.2)' : 'var(--border)'}`, padding: '3px 10px', borderRadius: 'var(--radius-full)' }}>
