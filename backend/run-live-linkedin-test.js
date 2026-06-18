@@ -65,7 +65,7 @@ async function run() {
       return document.querySelector('.authwall') || 
              document.querySelector('form.login__form') ||
              document.location.href.includes('login') ||
-             !document.querySelector('button.jobs-apply-button, [aria-label*="Easy Apply"]');
+             !document.querySelector('a.jobs-apply-button, button.jobs-apply-button, [aria-label*="Easy Apply"], [aria-label*="Apply on company website"]');
     });
 
     if (isLoginWall) {
@@ -84,7 +84,7 @@ async function run() {
             await page.goto(jobUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
           }
 
-          const hasApplyBtn = await page.$('button.jobs-apply-button, [aria-label*="Easy Apply"]');
+          const hasApplyBtn = await page.$('a.jobs-apply-button, button.jobs-apply-button, [aria-label*="Easy Apply"], [aria-label*="Apply on company website"]');
           if (hasApplyBtn) {
             loggedIn = true;
             console.log('\n🔓 Login detected! Proceeding with auto-apply...');
