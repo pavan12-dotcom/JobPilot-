@@ -14,7 +14,7 @@ api.interceptors.request.use(
   (config) => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('applyai_token');
-      const isPublic = config.url === '/auth/login' || config.url === '/auth/register';
+      const isPublic = config.url === '/auth/login' || config.url === '/auth/register' || config.url === '/jobs/public-stats' || config.url === '/health';
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else if (!isPublic) {
@@ -80,6 +80,7 @@ export const jobsApi = {
   apply: (id) => api.post(`/jobs/${id}/apply`),
   refresh: () => api.post('/jobs/refresh'),
   abTest: (id) => api.post(`/jobs/${id}/ab-test`),
+  getPublicStats: () => api.get('/jobs/public-stats'),
 };
 
 export const applicationsApi = {

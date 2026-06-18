@@ -22,15 +22,7 @@ function timeAgo(iso) {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
-const DEMO_APPS = [
-  { id: 1, job: { title: 'Product Designer', company: 'Google', location: 'Mountain View' }, status: 'APPLIED', created_at: new Date(Date.now() - 7200000).toISOString(), salary: '$120k–$160k/yr' },
-  { id: 2, job: { title: 'UX Researcher', company: 'Spotify', location: 'Stockholm' }, status: 'INTERVIEW', created_at: new Date(Date.now() - 86400000).toISOString(), salary: '$95k–$130k/yr' },
-  { id: 3, job: { title: 'Frontend Engineer', company: 'Netflix', location: 'Los Angeles' }, status: 'APPLIED', created_at: new Date(Date.now() - 172800000).toISOString(), salary: '$140k–$190k/yr' },
-  { id: 4, job: { title: 'Data Scientist', company: 'Meta', location: 'New York' }, status: 'PENDING', created_at: new Date(Date.now() - 259200000).toISOString(), salary: '$160k–$200k/yr' },
-  { id: 5, job: { title: 'ML Engineer', company: 'Apple', location: 'Cupertino' }, status: 'APPLIED', created_at: new Date(Date.now() - 345600000).toISOString(), salary: '$180k–$240k/yr' },
-  { id: 6, job: { title: 'Design Lead', company: 'Shopify', location: 'Remote' }, status: 'INTERVIEW', created_at: new Date(Date.now() - 432000000).toISOString(), salary: '$150k–$190k/yr' },
-  { id: 7, job: { title: 'Product Manager', company: 'Amazon', location: 'Seattle' }, status: 'REJECTED', created_at: new Date(Date.now() - 604800000).toISOString(), salary: '$135k–$175k/yr' },
-];
+
 
 export default function SavedScreen({ goTo, showToast, setSelectedJob, selectedJob }) {
   const [apps, setApps] = useState([]);
@@ -53,7 +45,7 @@ export default function SavedScreen({ goTo, showToast, setSelectedJob, selectedJ
     }
   }
 
-  const list = apps.length > 0 ? apps : DEMO_APPS;
+  const list = apps;
   const filtered = filter === 'All' ? list : list.filter((a) => {
     const status = (a.status || '').toUpperCase();
     const f = filter.toUpperCase();

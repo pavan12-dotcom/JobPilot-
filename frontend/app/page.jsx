@@ -282,7 +282,7 @@ export default function JobPilotApp() {
     login: <LoginScreen goTo={goTo} setUser={setUser} />,
     onboarding: <OnboardingScreen goTo={goTo} showToast={showToast} back={back} />,
     home: <HomeScreen goTo={goTo} user={user} showToast={showToast} setSelectedJob={setSelectedJob} />,
-    search: <ExploreScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
+    search: <ExploreScreen goTo={goTo} user={user} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     saved: <SavedScreen goTo={goTo} showToast={showToast} setSelectedJob={setSelectedJob} selectedJob={selectedJob} />,
     detail: <DetailScreen back={back} showToast={showToast} selectedJob={selectedJob} />,
     profile: <ProfileScreen goTo={goTo} user={user} showToast={showToast} setUser={setUser} back={back} installApp={installApp} isInstallable={!!deferredPrompt} />,

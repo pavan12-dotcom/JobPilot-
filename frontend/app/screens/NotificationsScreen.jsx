@@ -2,13 +2,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi } from '@/lib/api';
 
-const DEMO_NOTIFS = [
-  { id: 1, type: 'match', title: 'New match: Product Designer at Google', body: '95% match with your profile. 234 applicants so far.', time: '2 minutes ago', unread: true },
-  { id: 2, type: 'apply', title: 'Application viewed by Netflix', body: 'Netflix reviewed your Frontend Engineer application.', time: '1 hour ago', unread: true },
-  { id: 3, type: 'interview', title: 'Interview scheduled with Spotify', body: 'Video interview on June 20 at 10:00 AM IST.', time: '3 hours ago', unread: true },
-  { id: 4, type: 'view', title: 'Your profile is trending', body: '12 recruiters viewed your profile this week.', time: 'Yesterday', unread: false },
-  { id: 5, type: 'mail', title: 'Message from Meta recruiter', body: '"Hi, we\'d love to discuss the Data Scientist role…"', time: '2 days ago', unread: false },
-];
+
 
 const ICON_MAP = {
   match:     { icon: 'ti-briefcase', bg: 'var(--lime-dim)', border: 'var(--border2)', color: 'var(--lime)' },
@@ -30,20 +24,16 @@ export default function NotificationsScreen({ back }) {
     try {
       const res = await dashboardApi.activity(10);
       const acts = res?.data || [];
-      if (acts.length > 0) {
-        setNotifs(acts.map((a, i) => ({
-          id: a.id || i,
-          type: a.type || 'match',
-          title: a.message || a.description || 'Activity update',
-          body: a.details || '',
-          time: timeAgo(a.created_at),
-          unread: i < 3,
-        })));
-      } else {
-        setNotifs(DEMO_NOTIFS);
-      }
+      setNotifs(acts.map((a, i) => ({
+        id: a.id || i,
+        type: a.type || 'match',
+        title: a.title || a.message || 'Activity update',
+        body: a.subtitle || a.details || '',
+        time: timeAgo(a.timestamp || a.created_at),
+        unread: i < 3,
+      })));
     } catch {
-      setNotifs(DEMO_NOTIFS);
+      setNotifs([]);
     } finally {
       setLoading(false);
     }
@@ -72,7 +62,7 @@ export default function NotificationsScreen({ back }) {
             <i className="ti ti-loader" style={{ fontSize: 24, display: 'block', marginBottom: 8, animation: 'spin 1s linear infinite' }} />
             Loading…
           </div>
-        ) : (
+        ) : notifs.length > 0 ? (
           notifs.map((n) => {
             const ic = ICON_MAP[n.type] || ICON_MAP.match;
             return (
@@ -89,6 +79,12 @@ export default function NotificationsScreen({ back }) {
               </div>
             );
           })
+        ) : (
+          <div style={{ padding: '60px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <i className="ti ti-bell-off" style={{ fontSize: 40, color: 'var(--text3)', marginBottom: 12 }} />
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>No notifications yet</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', maxWidth: 220, lineHeight: 1.5 }}>When auto-apply submits applications or matches are found, they will show up here.</div>
+          </div>
         )}
         <div className="sp" />
       </div>

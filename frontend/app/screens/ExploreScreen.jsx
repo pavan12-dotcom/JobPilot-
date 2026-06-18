@@ -15,7 +15,7 @@ function scoreColor(score) {
   return '#FCD34D';
 }
 
-export default function ExploreScreen({ goTo, showToast, setSelectedJob, selectedJob }) {
+export default function ExploreScreen({ goTo, user, showToast, setSelectedJob, selectedJob }) {
   const [query, setQuery] = useState('');
   const [location, setLocation] = useState('Anywhere');
   const [jobType, setJobType] = useState('All types');
@@ -64,7 +64,7 @@ export default function ExploreScreen({ goTo, showToast, setSelectedJob, selecte
     <>
       <div className="topbar">
         <div className="logo">Job<span>Pilot</span></div>
-        <div className="ava" onClick={() => goTo('profile')}>AR</div>
+        <div className="ava" onClick={() => goTo('profile')}>{(user?.name || 'AR').slice(0, 2).toUpperCase()}</div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
@@ -116,7 +116,7 @@ export default function ExploreScreen({ goTo, showToast, setSelectedJob, selecte
 
         <div className="divl" />
         <div className="res-count">
-          {loading ? 'Searching…' : <><strong>{filtered.length || count || '5,284'}</strong> jobs found</>}
+          {loading ? 'Searching…' : <><strong>{query ? filtered.length : (count ?? 0)}</strong> jobs found</>}
         </div>
 
         {/* Job cards */}
@@ -156,43 +156,13 @@ export default function ExploreScreen({ goTo, showToast, setSelectedJob, selecte
             );
           })
         ) : (
-          /* Demo cards when no API data */
-          [
-            { logo: 'G', bg: 'var(--lime-dim)', color: 'var(--lime)', title: 'Product Designer', co: 'Google · Remote', score: 94, type: 'Remote', sal: '$120k–$160k' },
-            { logo: 'N', bg: 'rgba(251,191,36,0.1)', color: '#FCD34D', title: 'Senior UI Designer', co: 'Netflix · Los Angeles', score: 88, type: 'Hybrid', sal: '$130k–$170k' },
-            { logo: 'Sh', bg: 'rgba(52,211,153,0.1)', color: '#34D399', title: 'Design Lead', co: 'Shopify · Remote', score: 82, type: 'Remote', sal: '$150k–$190k' },
-          ].map((d, i) => (
-            <div key={i} className="jcard" onClick={() => {
-              setSelectedJob({
-                job: {
-                  title: d.title,
-                  company: d.co.split(' · ')[0] || d.co,
-                  location: d.co.split(' · ')[1] || 'Remote',
-                  job_type: d.type === 'Remote' ? 'REMOTE' : 'FULL_TIME',
-                  apply_url: 'https://www.linkedin.com/jobs',
-                  salary_min: 120000,
-                  salary_max: 160000,
-                  description: "Join an amazing team and help shape experiences for millions of users. Partner with engineering, research, and PMs to define and ship high-quality features."
-                },
-                match_score: d.score,
-                match_reasons: {
-                  summary: "This is a pre-configured demo match showing high compatibility with your profile."
-                }
-              });
-              goTo('detail');
-            }}>
-              <div className="jc-row">
-                <div className="jc-logo" style={{ background: d.bg, color: d.color }}>{d.logo}</div>
-                <div className="jc-inf"><div className="jc-title">{d.title}</div><div className="jc-meta">{d.co}</div></div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: scoreColor(d.score), background: `${scoreColor(d.score)}18`, border: `1px solid ${scoreColor(d.score)}30`, borderRadius: 'var(--radius-full)', padding: '3px 8px', flexShrink: 0 }}>{d.score}%</span>
-                <button className="jsave" onClick={(e) => { e.stopPropagation(); showToast('Job saved!'); }}><i className="ti ti-bookmark" /></button>
-              </div>
-              <div className="jc-bot">
-                <div className="tags-row"><span className="jtag t-remote">{d.type}</span><span className="jtag t-full">Full-time</span></div>
-                <div className="jc-salary">{d.sal}</div>
-              </div>
+          <div style={{ textAlign: 'center', padding: '48px 20px', color: 'var(--text3)', fontSize: 13 }}>
+            <i className="ti ti-briefcase" style={{ fontSize: 36, display: 'block', marginBottom: 12, color: 'var(--text3)' }} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>No jobs found</div>
+            <div style={{ maxWidth: 260, margin: '0 auto', lineHeight: 1.5 }}>
+              Try adjusting your search queries or category filters to find matched positions.
             </div>
-          ))
+          </div>
         )}
 
         <div className="sp" />

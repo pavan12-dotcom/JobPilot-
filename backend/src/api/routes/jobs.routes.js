@@ -12,6 +12,18 @@ const resumeService = require('../../services/resume.service');
 
 const router = express.Router();
 
+// GET /api/jobs/public-stats — Get public job counts
+router.get(
+  '/public-stats',
+  asyncHandler(async (req, res) => {
+    const totalJobs = await prisma.job.count({ where: { is_active: true } });
+    res.json({
+      success: true,
+      data: { total_jobs: totalJobs },
+    });
+  })
+);
+
 // GET /api/jobs — Get recommended jobs for user
 router.get(
   '/',

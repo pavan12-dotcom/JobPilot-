@@ -2,13 +2,7 @@
 import { useState, useEffect } from 'react';
 import { dashboardApi, jobsApi } from '@/lib/api';
 
-const DEMO_STATS = { total_applied: 23, interviews: 4, success_rate: 17, jobs_matched_today: 12, applied_today: 5 };
-const DEMO_ACTIVITY = [
-  { id: 1, type: 'match', message: 'New 94% match: Product Designer at Google', created_at: new Date(Date.now() - 120000).toISOString() },
-  { id: 2, type: 'apply', message: 'Auto-applied to Frontend Engineer at Netflix', created_at: new Date(Date.now() - 3600000).toISOString() },
-  { id: 3, type: 'interview', message: 'Interview scheduled with Spotify — June 20', created_at: new Date(Date.now() - 10800000).toISOString() },
-  { id: 4, type: 'view', message: '12 recruiters viewed your profile this week', created_at: new Date(Date.now() - 86400000).toISOString() },
-];
+
 
 function timeAgo(iso) {
   const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -68,8 +62,7 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
     }
   }
 
-  const s = stats || DEMO_STATS;
-  const acts = activity.length > 0 ? activity : DEMO_ACTIVITY;
+  const s = stats ?? {};
   const featured = topJobs[0];
 
 
