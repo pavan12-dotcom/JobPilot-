@@ -9,6 +9,7 @@ const ApiError = require('../../utils/ApiError');
 const jobService = require('../../services/job.service');
 const applicationService = require('../../services/application.service');
 const resumeService = require('../../services/resume.service');
+const logger = require('../../utils/logger');
 
 const router = express.Router();
 
@@ -130,12 +131,12 @@ router.post(
       'MANUAL',
     );
 
-    // Enqueue auto-apply job
+    // Enqueue draft preparation (Stage 1 of 2-stage auto-apply flow)
     try {
-      const { autoApplyQueue } = require('../../queues/autoApply.queue');
-      await autoApplyQueue.add('apply', { applicationId: application.id }, { attempts: 2, backoff: 5000 });
+      const { getAutoApplyQueue } = require('../../queues/autoApply.queue');
+      await getAutoApplyQueue().add('prepare', { applicationId: application.id }, { attempts: 2, backoff: 5000 });
     } catch (queueErr) {
-      // Queue may not be available in dev — that's ok
+      logger.warn('Auto-apply queue not available, application queued without automation:', queueErr.message);
     }
 
     res.status(201).json({

@@ -30,18 +30,21 @@ async function processJobFetch(job) {
     if (user) usersToProcess = [user];
   }
 
+  // ── Cleanup expired jobs once per cycle (not per user) ──────────────
+  await jobService.cleanupExpiredJobs();
+
   for (const user of usersToProcess) {
     if (!user.preferences) continue;
 
     try {
       const stats = await jobService.fetchJobsForUser(user.preferences);
-      logger.info(`User ${user.email}: fetched ${stats.total}, ${stats.created} new`);
+      logger.info(`User ${user.email}: fetched ${stats.total}, ${stats.created} new, ${stats.updated} refreshed`);
 
       if (stats.created > 0) {
-        // Get new jobs that need matching
+        // Get newly created jobs that need matching (created in last 10 mins)
         const recentJobs = await prisma.job.findMany({
           where: {
-            created_at: { gte: new Date(Date.now() - 10 * 60 * 1000) }, // Last 10 mins
+            created_at: { gte: new Date(Date.now() - 10 * 60 * 1000) },
             is_active: true,
           },
           take: 50,
