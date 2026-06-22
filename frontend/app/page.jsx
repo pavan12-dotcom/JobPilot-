@@ -345,17 +345,17 @@ export default function JobPilotApp() {
   const styleTag = (
     <style dangerouslySetInnerHTML={{ __html: `
         :root {
-          --bg:#141F14;--bg2:#1C2B1C;--bg3:#243024;--bg4:#2C3A2C;
-          --card:rgba(28,43,28,0.95);--card2:rgba(36,48,36,0.9);
-          --lime:#B8F023;--lime2:#CEFF4A;
-          --lime-dim:rgba(184,240,35,0.12);--lime-mid:rgba(184,240,35,0.22);
-          --text1:#F0F5E8;--text2:#8BA882;--text3:#556B52;
-          --border:rgba(184,240,35,0.10);--border2:rgba(184,240,35,0.20);
+          --bg:#E7E5E2;--bg2:#DFDDD9;--bg3:#111111;--bg4:#B0AFA9;
+          --card:#DFDDD9;--card2:#111111;
+          --lime:#E13E3E;--lime2:#EF4444;
+          --lime-dim:rgba(225,62,62,0.08);--lime-mid:rgba(225,62,62,0.15);
+          --text1:#111111;--text2:#555555;--text3:#888888;
+          --border:rgba(0,0,0,0.08);--border2:rgba(225,62,62,0.15);
           --radius-sm:8px;--radius-md:14px;--radius-lg:20px;--radius-xl:28px;--radius-full:999px;
           --tr:0.22s cubic-bezier(0.4,0,0.2,1);
         }
         *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-        html,body{height:100%;background:#0D150D}
+        html,body{height:100%;background:#C9C7C4}
         body{font-family:'Inter',sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;min-height:100dvh;padding:0}
         .phone{width:100%;max-width:430px;height:100vh;height:100dvh;background:var(--bg);border-radius:0;overflow:hidden;
           position:relative;display:flex;flex-direction:column;user-select:none;

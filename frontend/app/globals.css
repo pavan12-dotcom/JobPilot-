@@ -6,41 +6,41 @@
 
 /* ── JobPilot Design System Tokens ─────────────────────────────── */
 :root {
-  --bg:           #141F14;          /* Dark Green */
-  --bg2:          #1C2B1C;          /* Slightly lighter green container */
-  --bg3:          #243024;          /* Deep contrast green */
-  --bg4:          #2C3A2C;          /* Medium green accent */
-  --card:         rgba(28,43,28,0.95);
-  --card2:        rgba(36,48,36,0.9);
+  --bg:           #E7E5E2;          /* Light warm gray */
+  --bg2:          #DFDDD9;          /* Slightly darker warm gray container */
+  --bg3:          #111111;          /* Deep dark charcoal for contrast */
+  --bg4:          #B0AFA9;          /* Medium gray accent */
+  --card:         #DFDDD9;
+  --card2:        #111111;
   
-  --lime:         #B8F023;          /* Lime Green Accent */
-  --lime2:        #CEFF4A;          /* Vibrant lime accent */
-  --lime-dim:     rgba(184, 240, 35, 0.12);
-  --lime-mid:     rgba(184, 240, 35, 0.22);
+  --lime:         #E13E3E;          /* Crimson Red Accent */
+  --lime2:        #EF4444;          /* Vibrant accent red */
+  --lime-dim:     rgba(225, 62, 62, 0.08);
+  --lime-mid:     rgba(225, 62, 62, 0.15);
   
-  --text1:        #F0F5E8;          /* Light green/white primary text */
-  --text2:        #8BA882;          /* Muted description text */
-  --text3:        #556B52;          /* Muted label/border text */
+  --text1:        #111111;          /* Dark charcoal primary text */
+  --text2:        #555555;          /* Muted description text */
+  --text3:        #888888;          /* Light gray border/label text */
   
-  --border:       rgba(184, 240, 35, 0.10);  /* Subtle lime border */
-  --border2:      rgba(184, 240, 35, 0.20);
+  --border:       rgba(0, 0, 0, 0.08);  /* Subtle dark border */
+  --border2:      rgba(225, 62, 62, 0.15);
   
   /* Tailwind standard overrides */
-  --primary:      #B8F023;
-  --primary-hover:#CEFF4A;
-  --primary-light:rgba(184, 240, 35, 0.2);
+  --primary:      #E13E3E;
+  --primary-hover:#EF4444;
+  --primary-light:rgba(225, 62, 62, 0.2);
   --success:      #4ADE80;
   --warning:      #FCD34D;
   --error:        #F87171;
-  --text:         #F0F5E8;
-  --muted:        #8BA882;
-  --subtle:       #556B52;
+  --text:         #111111;
+  --muted:        #555555;
+  --subtle:       #888888;
 }
 
 /* ── Base Reset ─────────────────────────────────────────────── */
 html, body {
   height: 100%;
-  background-color: #0D150D; /* Dark green canvas background */
+  background-color: #C9C7C4; /* Soft gray canvas background */
   color: var(--text1);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
