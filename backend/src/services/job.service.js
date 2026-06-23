@@ -400,34 +400,54 @@ async function fetchFromNaukri(targetRoles = [], locations = []) {
 // ── Deduplication & DB Upsert ────────────────────────────────────────────────
 
 async function deduplicateAndSaveJobs(rawJobs) {
-  let created = 0;
-  let updated = 0;
-
-  for (const jobData of rawJobs) {
-    try {
-      const existing = await prisma.job.findUnique({
-        where: { external_id: jobData.external_id },
-        select: { id: true },
-      });
-
-      await prisma.job.upsert({
-        where: { external_id: jobData.external_id },
-        update: {
-          is_active: true,
-          expires_at: jobData.expires_at,
-          description: jobData.description || undefined,
-        },
-        create: jobData,
-      });
-
-      if (existing) updated++;
-      else created++;
-    } catch (err) {
-      logger.error(`Failed to save job ${jobData.external_id}:`, err.message);
-    }
+  if (!rawJobs || rawJobs.length === 0) {
+    return { created: 0, updated: 0, total: 0 };
   }
 
-  return { created, updated, total: rawJobs.length };
+  try {
+    const externalIds = rawJobs.map((j) => j.external_id);
+    const existingJobs = await prisma.job.findMany({
+      where: { external_id: { in: externalIds } },
+      select: { external_id: true },
+    });
+
+    const existingSet = new Set(existingJobs.map((j) => j.external_id));
+    const newJobs = rawJobs.filter((j) => !existingSet.has(j.external_id));
+
+    let created = 0;
+    if (newJobs.length > 0) {
+      // Deduplicate inside newJobs array itself (in case scraper returns duplicates in same payload)
+      const uniqueNewJobs = [];
+      const seen = new Set();
+      for (const job of newJobs) {
+        if (!seen.has(job.external_id)) {
+          seen.add(job.external_id);
+          uniqueNewJobs.push(job);
+        }
+      }
+
+      const result = await prisma.job.createMany({
+        data: uniqueNewJobs,
+        skipDuplicates: true,
+      });
+      created = result.count;
+    }
+
+    let updated = 0;
+    const existingIdsToUpdate = Array.from(existingSet);
+    if (existingIdsToUpdate.length > 0) {
+      const result = await prisma.job.updateMany({
+        where: { external_id: { in: existingIdsToUpdate } },
+        data: { is_active: true },
+      });
+      updated = result.count;
+    }
+
+    return { created, updated, total: rawJobs.length };
+  } catch (err) {
+    logger.error('Failed to deduplicate and save jobs:', err.message);
+    return { created: 0, updated: 0, total: rawJobs.length };
+  }
 }
 
 // ── Main Orchestrator ─────────────────────────────────────────────────────────
