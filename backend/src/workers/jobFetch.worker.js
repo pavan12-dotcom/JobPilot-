@@ -65,6 +65,19 @@ async function processJobFetch(job) {
         // Send notification (non-blocking)
         sendNewMatches(user.email, user.name, stats.created, null).catch(() => {});
       }
+
+      // Always broadcast refresh signal so UI updates (even if 0 new jobs, stats may change)
+      try {
+        const { broadcastToUser } = require('../services/websocket.service');
+        broadcastToUser(user.id, 'jobs-refreshed', {
+          newMatches: recentJobs?.length || 0,
+          newJobs: stats.created,
+          timestamp: new Date().toISOString(),
+        });
+        broadcastToUser(user.id, 'stats-updated', { source: 'hourly-fetch' });
+      } catch (wsErr) {
+        logger.warn('WS broadcast failed in fetch worker (non-fatal):', wsErr.message);
+      }
     } catch (err) {
       logger.error(`Job fetch failed for user ${user.id}:`, err.message);
     }

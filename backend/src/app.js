@@ -263,7 +263,21 @@ async function startServer() {
               }
             }
             logger.info(`⏰ Created ${matched} new matches for ${user.email}`);
-          }
+
+            // ── Broadcast real-time update to connected clients ──
+            try {
+              const { broadcastToUser } = require('./services/websocket.service');
+              broadcastToUser(user.id, 'jobs-refreshed', {
+                newMatches: matched,
+                newJobs: stats?.created || 0,
+                timestamp: new Date().toISOString(),
+              });
+              broadcastToUser(user.id, 'stats-updated', { source: 'hourly-fetch' });
+              logger.info(`📡 Broadcasted jobs-refreshed to ${user.email}: ${matched} new matches`);
+            } catch (wsErr) {
+              logger.warn('WS broadcast failed (non-fatal):', wsErr.message);
+            }
+          } // end for (const user of users)
         } catch (fetchErr) {
           logger.error('Fallback periodic fetch failed:', fetchErr.message);
         } finally {

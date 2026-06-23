@@ -45,6 +45,17 @@ export default function ExploreScreen({ goTo, user, showToast, setSelectedJob, s
 
   useEffect(() => { loadJobs(); }, [loadJobs]);
 
+  // Auto-refresh when backend pushes a jobs-refreshed event via WebSocket
+  useEffect(() => {
+    const handleRefresh = () => { loadJobs(); };
+    window.addEventListener('jobpilot:jobs-refreshed', handleRefresh);
+    window.addEventListener('jobpilot:stats-updated', handleRefresh);
+    return () => {
+      window.removeEventListener('jobpilot:jobs-refreshed', handleRefresh);
+      window.removeEventListener('jobpilot:stats-updated', handleRefresh);
+    };
+  }, [loadJobs]);
+
   async function handleSave(job, btn) {
     try {
       await jobsApi.save(job.job?.id || job.id);

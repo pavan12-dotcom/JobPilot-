@@ -1,8 +1,8 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { dashboardApi, jobsApi } from '@/lib/api';
 
-
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 function timeAgo(iso) {
   const secs = Math.floor((Date.now() - new Date(iso)) / 1000);
@@ -12,7 +12,21 @@ function timeAgo(iso) {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
-const ICON_MAP = { match: { icon: 'ti-briefcase', bg: 'var(--lime-dim)', color: 'var(--lime)' }, apply: { icon: 'ti-send', bg: 'rgba(34,197,94,0.1)', color: '#4ADE80' }, interview: { icon: 'ti-calendar', bg: 'rgba(251,191,36,0.1)', color: '#FCD34D' }, view: { icon: 'ti-eye', bg: 'rgba(96,165,250,0.1)', color: '#93C5FD' }, default: { icon: 'ti-activity', bg: 'var(--bg3)', color: 'var(--text2)' } };
+function formatCountdown(ms) {
+  if (ms <= 0) return '0:00';
+  const totalSecs = Math.floor(ms / 1000);
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+const ICON_MAP = {
+  match: { icon: 'ti-briefcase', bg: 'var(--lime-dim)', color: 'var(--lime)' },
+  apply: { icon: 'ti-send', bg: 'rgba(34,197,94,0.1)', color: '#4ADE80' },
+  interview: { icon: 'ti-calendar', bg: 'rgba(251,191,36,0.1)', color: '#FCD34D' },
+  view: { icon: 'ti-eye', bg: 'rgba(96,165,250,0.1)', color: '#93C5FD' },
+  default: { icon: 'ti-activity', bg: 'var(--bg3)', color: 'var(--text2)' },
+};
 
 export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
   const [stats, setStats] = useState(null);
@@ -23,30 +37,22 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('All');
 
+  // Real-time state
+  const [lastUpdated, setLastUpdated] = useState(null);       // Date of last successful fetch
+  const [nextRefreshIn, setNextRefreshIn] = useState(REFRESH_INTERVAL_MS); // ms until next auto-refresh
+  const [newJobsBanner, setNewJobsBanner] = useState(null);   // { count, timestamp } or null
+
+  const nextRefreshAt = useRef(Date.now() + REFRESH_INTERVAL_MS);
+  const autoRefreshTimer = useRef(null);
+  const countdownTimer = useRef(null);
+
   const userName = user?.name?.split(' ')[0] || 'there';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  useEffect(() => {
-    loadDashboard();
-
-    const handleRealtimeUpdate = () => {
-      loadDashboard();
-    };
-
-    window.addEventListener('jobpilot:stats-updated', handleRealtimeUpdate);
-    window.addEventListener('jobpilot:job-matched', handleRealtimeUpdate);
-    window.addEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
-
-    return () => {
-      window.removeEventListener('jobpilot:stats-updated', handleRealtimeUpdate);
-      window.removeEventListener('jobpilot:job-matched', handleRealtimeUpdate);
-      window.removeEventListener('jobpilot:application-status-updated', handleRealtimeUpdate);
-    };
-  }, []);
-
-  async function loadDashboard() {
-    setLoading(true);
+  // ── Load dashboard data ──────────────────────────────────────────────────────
+  const loadDashboard = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [statsRes, activityRes, insightsRes, jobsRes] = await Promise.allSettled([
         dashboardApi.stats(),
@@ -58,17 +64,109 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
       if (activityRes.status === 'fulfilled') setActivity(activityRes.value?.data || []);
       if (insightsRes.status === 'fulfilled') setInsights(insightsRes.value?.data?.insights || []);
       if (jobsRes.status === 'fulfilled') setTopJobs(jobsRes.value?.data || []);
+      setLastUpdated(new Date());
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }
+  }, []);
 
+  // ── Schedule the next hourly auto-refresh ────────────────────────────────────
+  const scheduleNextRefresh = useCallback(() => {
+    if (autoRefreshTimer.current) clearTimeout(autoRefreshTimer.current);
+    nextRefreshAt.current = Date.now() + REFRESH_INTERVAL_MS;
+    setNextRefreshIn(REFRESH_INTERVAL_MS);
+
+    autoRefreshTimer.current = setTimeout(async () => {
+      // Silently trigger a backend job-fetch then reload dashboard
+      try {
+        await jobsApi.refresh();
+      } catch (_) { /* non-fatal */ }
+      await loadDashboard(true);
+      setLastUpdated(new Date());
+      showToast('🔄 Jobs refreshed automatically!');
+      scheduleNextRefresh(); // reschedule
+    }, REFRESH_INTERVAL_MS);
+  }, [loadDashboard, showToast]);
+
+  // ── Live countdown ticker ────────────────────────────────────────────────────
+  useEffect(() => {
+    countdownTimer.current = setInterval(() => {
+      const remaining = nextRefreshAt.current - Date.now();
+      setNextRefreshIn(Math.max(0, remaining));
+    }, 1000);
+    return () => clearInterval(countdownTimer.current);
+  }, []);
+
+  // ── Initial load + schedule ──────────────────────────────────────────────────
+  useEffect(() => {
+    loadDashboard();
+    scheduleNextRefresh();
+    return () => {
+      if (autoRefreshTimer.current) clearTimeout(autoRefreshTimer.current);
+    };
+  }, []);
+
+  // ── WebSocket real-time events ───────────────────────────────────────────────
+  useEffect(() => {
+    const handleJobsRefreshed = (e) => {
+      const { newMatches = 0, newJobs = 0 } = e.detail || {};
+      // Show banner if there are new items
+      if (newMatches > 0 || newJobs > 0) {
+        setNewJobsBanner({ newMatches, newJobs, timestamp: Date.now() });
+      }
+      // Silently reload the dashboard
+      loadDashboard(true);
+      setLastUpdated(new Date());
+      // Reset the countdown since we just got fresh data
+      nextRefreshAt.current = Date.now() + REFRESH_INTERVAL_MS;
+      setNextRefreshIn(REFRESH_INTERVAL_MS);
+    };
+
+    const handleStatsUpdated = () => {
+      loadDashboard(true);
+      setLastUpdated(new Date());
+    };
+
+    const handleJobMatched = (e) => {
+      const { score, job } = e.detail || {};
+      if (job) {
+        showToast(`🎯 New match: ${score}% — ${job.title} at ${job.company}!`);
+      }
+      loadDashboard(true);
+    };
+
+    const handleStatusUpdated = (e) => {
+      const { status, application } = e.detail || {};
+      const job = application?.job || {};
+      if (job?.title) {
+        showToast(`🚀 Status updated: ${status} for ${job.title}`);
+      }
+      loadDashboard(true);
+    };
+
+    window.addEventListener('jobpilot:jobs-refreshed', handleJobsRefreshed);
+    window.addEventListener('jobpilot:stats-updated', handleStatsUpdated);
+    window.addEventListener('jobpilot:job-matched', handleJobMatched);
+    window.addEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+
+    return () => {
+      window.removeEventListener('jobpilot:jobs-refreshed', handleJobsRefreshed);
+      window.removeEventListener('jobpilot:stats-updated', handleStatsUpdated);
+      window.removeEventListener('jobpilot:job-matched', handleJobMatched);
+      window.removeEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+    };
+  }, [loadDashboard, showToast]);
+
+  // ── Manual refresh (Scan Queue button) ──────────────────────────────────────
   async function handleRefresh() {
     setRefreshing(true);
     try {
       await jobsApi.refresh();
-      showToast('Job scan triggered! New matches incoming…');
-      setTimeout(loadDashboard, 2000);
+      showToast('⚡ Job scan triggered! New matches incoming…');
+      setTimeout(() => {
+        loadDashboard(true);
+        scheduleNextRefresh();
+      }, 2500);
     } catch {
       showToast('Set preferences first to fetch jobs.');
     } finally {
@@ -79,8 +177,6 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
   const s = stats ?? {};
   const featured = topJobs[0];
 
-
-
   return (
     <>
       <div className="topbar">
@@ -90,6 +186,41 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
           <div className="ava" onClick={() => goTo('profile')}>{(user?.name || 'AR').slice(0, 2).toUpperCase()}</div>
         </div>
       </div>
+
+      {/* New Jobs Banner */}
+      {newJobsBanner && (
+        <div
+          style={{
+            margin: '0 20px 0',
+            background: 'linear-gradient(135deg, rgba(74,222,128,0.15), rgba(163,230,53,0.1))',
+            border: '1px solid rgba(74,222,128,0.35)',
+            borderRadius: 12,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            animation: 'slideDown 0.4s ease',
+            cursor: 'pointer',
+          }}
+          onClick={() => { setNewJobsBanner(null); goTo('search'); }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 18 }}>🆕</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#4ADE80' }}>
+                {newJobsBanner.newMatches > 0
+                  ? `${newJobsBanner.newMatches} new job match${newJobsBanner.newMatches !== 1 ? 'es' : ''} found!`
+                  : `${newJobsBanner.newJobs} new jobs added!`}
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text2)' }}>Tap to explore →</div>
+            </div>
+          </div>
+          <button
+            style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 4 }}
+            onClick={(e) => { e.stopPropagation(); setNewJobsBanner(null); }}
+          >✕</button>
+        </div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 8 }}>
         {/* Hero */}
@@ -123,7 +254,7 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
           ))}
         </div>
 
-        {/* Autopilot banner */}
+        {/* Autopilot banner with live countdown */}
         <div style={{ margin: '0 20px 14px', background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ width: 32, height: 32, background: 'var(--lime-mid)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -131,7 +262,11 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
             </div>
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)' }}>Autopilot Active</div>
-              <div style={{ fontSize: 10, color: 'var(--text2)' }}>Scoring threshold: 70%+</div>
+              <div style={{ fontSize: 10, color: 'var(--text2)' }}>
+                {lastUpdated
+                  ? `Updated ${timeAgo(lastUpdated)} · Next in ${formatCountdown(nextRefreshIn)}`
+                  : `Next refresh in ${formatCountdown(nextRefreshIn)}`}
+              </div>
             </div>
           </div>
           <span style={{ fontSize: 10, fontWeight: 700, color: '#4ADE80', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.15)', padding: '4px 10px', borderRadius: 'var(--radius-full)', display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -176,17 +311,17 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
             <i className="ti ti-briefcase" style={{ fontSize: 28, color: 'var(--text3)', marginBottom: 8 }} />
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>No Job Matches Yet</div>
             <div style={{ fontSize: 10, color: 'var(--text3)', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 }}>
-              Upload your resume and adjust preferences to start receiving matching job recommendations.
+              Upload your resume and set preferences to start receiving matching job recommendations.
             </div>
           </div>
         )}
 
-        {/* Scan queue button */}
+        {/* Scan queue / Recent Activity header */}
         <div className="sec-hd">
           <span className="sec-title">Recent Activity</span>
           <span className="see-all" onClick={handleRefresh} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <i className={`ti ti-refresh ${refreshing ? 'spinning' : ''}`} style={{ fontSize: 11 }} />
-            {refreshing ? 'Scanning…' : 'Scan Queue'}
+            {refreshing ? 'Scanning…' : 'Scan Now'}
           </span>
         </div>
 
@@ -235,7 +370,13 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
 
         <div className="sp" />
       </div>
-      <style>{`@keyframes ping { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} } .spinning{animation:spin 0.8s linear infinite} @keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      <style>{`
+        @keyframes ping { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes slideDown { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        .spinning { animation: spin 0.8s linear infinite }
+      `}</style>
     </>
   );
 }
