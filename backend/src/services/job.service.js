@@ -491,23 +491,31 @@ async function getRecommendedJobs(userId, options = {}) {
     job_type,
     location,
     source,
+    search,
     saved_only = false,
   } = options;
 
-  const prefs = await prisma.preference.findUnique({ where: { user_id: userId } });
-  const targetRole = prefs?.target_roles?.[0];
-
+  // Build job-level filters (applied inside the match join)
   const jobFilter = {
     is_active: true,
     ...(job_type ? { job_type } : {}),
     ...(location ? { location: { contains: location, mode: 'insensitive' } } : {}),
     ...(source ? { source } : {}),
+    // Text search: match title, company, or description
+    ...(search?.trim()
+      ? {
+          OR: [
+            { title: { contains: search.trim(), mode: 'insensitive' } },
+            { company: { contains: search.trim(), mode: 'insensitive' } },
+            { description: { contains: search.trim(), mode: 'insensitive' } },
+          ],
+        }
+      : {}),
   };
 
-  if (targetRole?.trim()) {
-    const roleFilter = buildRoleFilter(targetRole.trim().toLowerCase());
-    if (roleFilter) Object.assign(jobFilter, roleFilter);
-  }
+  // NOTE: buildRoleFilter is intentionally NOT applied here.
+  // The AI match_score already handles job-resume relevance.
+  // Filtering by job title would block valid cross-role matches.
 
   const where = {
     user_id: userId,

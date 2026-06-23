@@ -58,7 +58,7 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
         dashboardApi.stats(),
         dashboardApi.activity(4),
         dashboardApi.insights(),
-        jobsApi.getRecommended({ limit: 4, min_score: 70 }),
+        jobsApi.getRecommended({ limit: 4, min_score: 30 }),
       ]);
       if (statsRes.status === 'fulfilled') setStats(statsRes.value?.data);
       if (activityRes.status === 'fulfilled') setActivity(activityRes.value?.data || []);

@@ -27,14 +27,14 @@ export default function ExploreScreen({ goTo, user, showToast, setSelectedJob, s
   const loadJobs = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { limit: 20 };
+      const params = { limit: 50, min_score: 30 };
       if (query) params.search = query;
       if (TYPE_MAP[jobType]) params.job_type = TYPE_MAP[jobType];
       if (location === 'Remote') params.job_type = 'REMOTE';
       const res = await jobsApi.getRecommended(params);
       const list = res?.data || [];
       setJobs(list);
-      setCount(list.length);
+      setCount(res?.pagination?.total ?? list.length);
     } catch {
       setJobs([]);
       setCount(0);

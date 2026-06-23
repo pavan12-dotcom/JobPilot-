@@ -30,7 +30,7 @@ router.get(
   '/',
   authenticate,
   asyncHandler(async (req, res) => {
-    const { page = 1, limit = 20, min_score = 50, job_type, location, source, saved } = req.query;
+    const { page = 1, limit = 20, min_score = 30, job_type, location, source, saved, search } = req.query;
 
     const result = await jobService.getRecommendedJobs(req.user.id, {
       page: Number(page),
@@ -39,6 +39,7 @@ router.get(
       job_type,
       location,
       source,
+      search,
       saved_only: saved === 'true',
     });
 
@@ -177,12 +178,10 @@ router.post(
           where: {
             is_active: true,
             job_matches: {
-              none: {
-                user_id: req.user.id,
-              },
+              none: { user_id: req.user.id },
             },
           },
-          take: 30,
+          take: 100,
         });
 
         const { scoreJobMatch } = require('../../ai/jobMatcher');
