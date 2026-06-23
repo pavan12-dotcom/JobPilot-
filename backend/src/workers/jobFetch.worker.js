@@ -40,9 +40,11 @@ async function processJobFetch(job) {
       const stats = await jobService.fetchJobsForUser(user.preferences);
       logger.info(`User ${user.email}: fetched ${stats.total}, ${stats.created} new, ${stats.updated} refreshed`);
 
+      let recentJobs = [];
+
       if (stats.created > 0) {
         // Get newly created jobs that need matching (created in last 10 mins)
-        const recentJobs = await prisma.job.findMany({
+        recentJobs = await prisma.job.findMany({
           where: {
             created_at: { gte: new Date(Date.now() - 10 * 60 * 1000) },
             is_active: true,
@@ -70,7 +72,7 @@ async function processJobFetch(job) {
       try {
         const { broadcastToUser } = require('../services/websocket.service');
         broadcastToUser(user.id, 'jobs-refreshed', {
-          newMatches: recentJobs?.length || 0,
+          newMatches: recentJobs.length,
           newJobs: stats.created,
           timestamp: new Date().toISOString(),
         });
