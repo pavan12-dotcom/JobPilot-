@@ -7,16 +7,8 @@ const ApiError = require('../utils/ApiError');
 // Centralized client initialization using @google/genai
 const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY || process.env.GEMINI_API_KEY });
 const MODEL = 'gemini-2.5-flash';
+let apiCooldownUntil = 0;
 
-/**
- * Centered caller for Gemini content generation.
- * Features retry logic on transient errors (5xx, timeout) and ApiError wrapping.
- *
- * @param {string} prompt - Prompt text
- * @param {string} systemPrompt - Optional system instruction
- * @param {boolean} expectJson - Whether to expect and parse a JSON response
- * @returns {Promise<any>} Response text or parsed JSON object
- */
 /**
  * Helper to generate semantic mock responses as a fallback when Gemini is unavailable or rate-limited.
  */
@@ -109,6 +101,11 @@ function getFallbackResponse(prompt, systemPrompt = '', expectJson = false) {
  * @returns {Promise<any>} Response text or parsed JSON object
  */
 async function callGemini(prompt, systemPrompt = '', expectJson = false) {
+  if (Date.now() < apiCooldownUntil) {
+    logger.warn('⚠️ Gemini API is in rate-limit cooldown. Returning mock fallback immediately.');
+    return getFallbackResponse(prompt, systemPrompt, expectJson);
+  }
+
   if (!env.GEMINI_API_KEY && !process.env.GEMINI_API_KEY) {
     logger.warn('⚠️ GEMINI_API_KEY is not configured. Falling back to local mock generation.');
     return getFallbackResponse(prompt, systemPrompt, expectJson);
@@ -187,7 +184,8 @@ async function callGemini(prompt, systemPrompt = '', expectJson = false) {
   const isRateLimit = errMessage.includes('rate limit') || errMessage.includes('quota') || errMessage.includes('429') || lastError.statusCode === 429;
 
   if (isRateLimit) {
-    logger.warn(`⚠️ Gemini API rate-limited or quota exceeded. Falling back to local mock generation.`);
+    apiCooldownUntil = Date.now() + 5 * 60 * 1000; // 5 minutes cooldown
+    logger.warn(`⚠️ Gemini API rate-limited or quota exceeded. Cooling down for 5 mins. Falling back to local mock generation.`);
     return getFallbackResponse(prompt, systemPrompt, expectJson);
   }
 
