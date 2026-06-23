@@ -27,20 +27,99 @@ api.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ── Response interceptor: handle 401 ────────────────────────
+// ── Response interceptor: handle 401 with refresh ────────────
+// Single refresh-in-flight flag + queue to prevent parallel refresh storms
+let _isRefreshing = false;
+let _pendingQueue = []; // { resolve, reject }[]
+
+function processPendingQueue(error, token = null) {
+  _pendingQueue.forEach(({ resolve, reject }) => {
+    if (error) reject(error);
+    else resolve(token);
+  });
+  _pendingQueue = [];
+}
+
 api.interceptors.response.use(
   (response) => response.data,
-  (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('applyai_token');
-        localStorage.removeItem('applyai_user');
-        window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // If already refreshing, queue this request to retry once refresh completes
+      if (_isRefreshing) {
+        return new Promise((resolve, reject) => {
+          _pendingQueue.push({ resolve, reject });
+        }).then((newToken) => {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          originalRequest._retry = true;
+          return api(originalRequest).then((r) => r);
+        }).catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      _isRefreshing = true;
+
+      try {
+        // Attempt to refresh the Supabase session before giving up
+        const { supabase } = await import('./supabase');
+        if (!supabase) throw new Error('Supabase not configured');
+
+        const { data, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError || !data?.session) throw refreshError || new Error('Refresh failed');
+
+        const newToken = data.session.access_token;
+        localStorage.setItem('applyai_token', newToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+
+        processPendingQueue(null, newToken);
+        _isRefreshing = false;
+
+        // Transparently retry the original request with the fresh token
+        return api(originalRequest).then((r) => r);
+      } catch (refreshErr) {
+        processPendingQueue(refreshErr);
+        _isRefreshing = false;
+
+        // Refresh also failed — clear session and send user back to splash/login
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('applyai_token');
+          localStorage.removeItem('applyai_user');
+          window.location.href = '/';
+        }
+        return Promise.reject(refreshErr);
       }
     }
+
     return Promise.reject(error.response?.data || error);
   },
 );
+
+// ── Proactive token refresh every 45 minutes ─────────────────
+// Runs silently in the background so users rarely hit the 401 path.
+if (typeof window !== 'undefined') {
+  const REFRESH_INTERVAL_MS = 45 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const token = localStorage.getItem('applyai_token');
+      if (!token) return; // Not logged in — skip
+
+      const { supabase } = await import('./supabase');
+      if (!supabase) return;
+
+      const { data, error } = await supabase.auth.refreshSession();
+      if (!error && data?.session?.access_token) {
+        const newToken = data.session.access_token;
+        localStorage.setItem('applyai_token', newToken);
+        api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+        console.debug('[auth] Proactive token refresh successful');
+      }
+    } catch (err) {
+      console.warn('[auth] Proactive token refresh failed:', err?.message);
+    }
+  }, REFRESH_INTERVAL_MS);
+}
 
 // ── API Functions ────────────────────────────────────────────
 

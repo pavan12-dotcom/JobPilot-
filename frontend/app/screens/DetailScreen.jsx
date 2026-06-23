@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { jobsApi, applicationsApi } from '@/lib/api';
+import { getSourceLabel } from '@/lib/sourceLabels';
 
 const getRoleType = (titleText) => {
   const lower = (titleText || '').toLowerCase();
@@ -223,7 +224,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
           <div className="dsi"><div className="dsv">{salarySimple}</div><div className="dsl">Salary</div></div>
           <div className="dsi"><div className="dsv">{jobType}</div><div className="dsl">Work type</div></div>
           <div className="dsi"><div className="dsv">{job.experience_level || 'Senior'}</div><div className="dsl">Level</div></div>
-          <div className="dsi"><div className="dsv">{job.source || 'Adzuna'}</div><div className="dsl">Source</div></div>
+          <div className="dsi"><div className="dsv">{getSourceLabel(job.source) || 'Adzuna'}</div><div className="dsl">Source</div></div>
         </div>
 
         <div className="det-body">
@@ -477,7 +478,7 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
                 {[
                   [location, 'Location'],
                   [jobType, 'Job Type'],
-                  [job.source || 'Adzuna', 'Platform Source'],
+                  [getSourceLabel(job.source) || 'Adzuna', 'Platform Source'],
                   [job.posted_at ? new Date(job.posted_at).toLocaleDateString() : 'Recently', 'Posted Date']
                 ].map(([v, l]) => (
                   <div key={l} style={{ background: 'var(--bg2)', borderRadius: 'var(--radius-md)', padding: 12, border: '1px solid var(--border)' }}>

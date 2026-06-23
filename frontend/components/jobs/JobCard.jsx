@@ -1,5 +1,5 @@
 'use client';
-// components/jobs/JobCard.jsx
+import { getSourceLabel } from '@/lib/sourceLabels';
 import { motion } from 'framer-motion';
 import { MapPin, Building2, Clock, Bookmark, BookmarkCheck, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -83,7 +83,7 @@ export default function JobCard({ match, onSave, onApply, onClick }) {
 
       {/* Source badge */}
       <div className="flex items-center justify-between">
-        <span className="badge-gray">{job.source}</span>
+        <span className="badge-gray">{getSourceLabel(job.source)}</span>
 
         {/* Actions */}
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

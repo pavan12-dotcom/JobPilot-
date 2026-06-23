@@ -13,6 +13,26 @@ const { detectCaptcha, detectLoginWall } = require('../automation/captcha');
 const logger = require('../utils/logger');
 
 /**
+ * Build the most reliable CSS selector for a form field using a priority cascade:
+ *   1. name attribute  (most stable — survives React re-renders)
+ *   2. aria-label      (semantic, ATS-portal friendly)
+ *   3. placeholder     (common on modern SPA forms)
+ *   4. id              (last resort — may be dynamically generated)
+ *
+ * Returns null when no usable selector exists (field is skipped with a warning).
+ *
+ * @param {{ name?: string, ariaLabel?: string, placeholder?: string, id?: string, label?: string }} field
+ * @returns {string|null}
+ */
+function buildBestSelector(field) {
+  if (field.name) return `[name="${field.name}"]`;
+  if (field.ariaLabel) return `[aria-label="${field.ariaLabel}"]`;
+  if (field.placeholder) return `[placeholder="${field.placeholder}"]`;
+  if (field.id && !/^\d/.test(field.id)) return `#${field.id}`; // skip purely numeric IDs
+  return null;
+}
+
+/**
  * Resolves local file path of the resume, downloading if necessary, or falling back to a mock PDF.
  */
 async function getLocalResumePath(resume) {
@@ -180,11 +200,13 @@ async function processPrepareDraft(job) {
           const isVisible = el.offsetWidth > 0 && el.offsetHeight > 0 && style.visibility !== 'hidden' && style.display !== 'none';
           if (!isVisible) return null;
 
-          const labelText = el.labels?.[0]?.textContent?.trim() || el.placeholder?.trim() || '';
+          const labelText = el.labels?.[0]?.textContent?.trim() || '';
+          const ariaLabel = el.getAttribute('aria-label')?.trim() || '';
+          const placeholder = el.placeholder?.trim() || '';
           const nameText = el.name?.replace(/[_-]/g, ' ') || el.id?.replace(/[_-]/g, ' ') || '';
-          const label = labelText || nameText || '';
+          const label = labelText || ariaLabel || placeholder || nameText || '';
           const required = el.required || el.hasAttribute('required') || el.getAttribute('aria-required') === 'true' || labelText.includes('*') || labelText.toLowerCase().includes('required');
-          return { label, type: el.type || el.tagName.toLowerCase(), name: el.name, id: el.id, required };
+          return { label, type: el.type || el.tagName.toLowerCase(), name: el.name, id: el.id, ariaLabel, placeholder, required };
         }).filter((f) => f !== null && f.label.length > 0)
       );
 
@@ -198,7 +220,11 @@ async function processPrepareDraft(job) {
         }
 
         for (const field of fields) {
-          const selector = field.id ? `#${field.id}` : field.name ? `[name="${field.name}"]` : '';
+          const selector = buildBestSelector(field);
+          if (!selector) {
+            logger.warn(`[Stage1] Skipped field with no usable selector: "${field.label}"`);
+            continue;
+          }
           const val = generatedAnswers[field.label] || '';
 
           const isQuestion = field.type === 'textarea' || 
@@ -358,17 +384,29 @@ async function processSubmitApplication(job) {
           const isVisible = el.offsetWidth > 0 && el.offsetHeight > 0 && style.visibility !== 'hidden' && style.display !== 'none';
           if (!isVisible) return null;
 
-          const labelText = el.labels?.[0]?.textContent?.trim() || el.placeholder?.trim() || '';
+          const labelText = el.labels?.[0]?.textContent?.trim() || '';
+          const ariaLabel = el.getAttribute('aria-label')?.trim() || '';
+          const placeholder = el.placeholder?.trim() || '';
           const nameText = el.name?.replace(/[_-]/g, ' ') || el.id?.replace(/[_-]/g, ' ') || '';
-          return { label: labelText || nameText || '', type: el.type || el.tagName.toLowerCase(), name: el.name, id: el.id };
+          return {
+            label: labelText || ariaLabel || placeholder || nameText || '',
+            type: el.type || el.tagName.toLowerCase(),
+            name: el.name,
+            id: el.id,
+            ariaLabel,
+            placeholder,
+          };
         }).filter((f) => f !== null && f.label.length > 0)
       );
 
       // Fill visible fields
       for (const field of fields) {
         try {
-          const selector = field.id ? `#${field.id}` : field.name ? `[name="${field.name}"]` : '';
-          if (!selector) continue;
+          const selector = buildBestSelector(field);
+          if (!selector) {
+            logger.warn(`[Stage2] Skipped field with no usable selector: "${field.label}"`);
+            continue;
+          }
 
           const el = await targetPage.$(selector);
           if (!el || !(await el.isVisible())) continue;

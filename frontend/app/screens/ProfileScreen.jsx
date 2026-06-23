@@ -1,6 +1,9 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { dashboardApi, resumeApi, preferencesApi, authApi } from '@/lib/api';
+import EditProfileView from '@/components/profile/EditProfileView';
+import PreferencesView from '@/components/profile/PreferencesView';
+import PrivacyView from '@/components/profile/PrivacyView';
 
 // ── iOS / standalone detection ───────────────────────────────────────────────
 function detectIOS() {
@@ -79,7 +82,6 @@ function InstallBanner({ installApp, isInstallable }) {
           </div>
           <i className={`ti ti-chevron-${showGuide ? 'up' : 'down'}`} style={{ fontSize: 16, color: 'var(--text3)', flexShrink: 0 }} />
         </button>
-
         {showGuide && (
           <div style={{ borderTop: '1px solid var(--border)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
@@ -146,7 +148,6 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
 
   // Job Preferences Form State
   const [targetRoles, setTargetRoles] = useState([]);
-  const [targetRoleInput, setTargetRoleInput] = useState('');
   const [targetLocations, setTargetLocations] = useState([]);
   const [targetLocationInput, setTargetLocationInput] = useState('');
   const [minSalary, setMinSalary] = useState('');
@@ -157,19 +158,16 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
   const [minMatchScore, setMinMatchScore] = useState(70);
   const [blacklistedCompanies, setBlacklistedCompanies] = useState([]);
   const [blacklistInput, setBlacklistInput] = useState('');
-
-  // Privacy Mock Form State
-  const [recruiterVisibility, setRecruiterVisibility] = useState(true);
-  const [incognitoMode, setIncognitoMode] = useState(false);
   const [completion, setCompletion] = useState({ percent: 0, isComplete: false, missing: [] });
+
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   const name = user?.name || 'Loading...';
   const email = user?.email || 'Loading...';
   const initials = name && name !== 'Loading...' ? name.split(' ').filter(Boolean).map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'AR';
 
-  useEffect(() => {
-    loadData();
-  }, [user]);
+  useEffect(() => { loadData(); }, [user]);
 
   async function loadData() {
     const [statsRes, resumeRes, prefsRes] = await Promise.allSettled([
@@ -190,17 +188,14 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     if (prefsRes.status === 'fulfilled' && prefsRes.value?.data) {
       userPrefs = prefsRes.value.data;
       setPrefs(userPrefs);
-      if (prefsRes.value.completion) {
-        setCompletion(prefsRes.value.completion);
-      }
+      if (prefsRes.value.completion) setCompletion(prefsRes.value.completion);
     }
 
-    // Populate profile form state
     setProfileName(user?.name || '');
     setProfileEmail(user?.email || '');
     setDailyLimit(user?.daily_apply_limit || 10);
 
-    if (activeResume && activeResume.parsed_data) {
+    if (activeResume?.parsed_data) {
       const p = activeResume.parsed_data;
       setProfilePhone(p.phone || '');
       setLinkedinUrl(p.linkedin_url || p.linkedin || '');
@@ -233,7 +228,6 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     goTo('splash');
   }
 
-  // Resume helpers
   async function handleDeleteResume() {
     if (!resume) return;
     if (confirm('Are you sure you want to delete this resume?')) {
@@ -276,7 +270,6 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     }
   }
 
-  // Tag helper
   function addTag(state, setState, val, setInputVal) {
     const trimmed = val.trim();
     if (!trimmed) return;
@@ -288,74 +281,21 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     setState(state.filter((x) => x !== val));
   }
 
-  function toggleJobType(t) {
-    setPreferredJobTypes(
-      preferredJobTypes.includes(t)
-        ? preferredJobTypes.filter((x) => x !== t)
-        : [...preferredJobTypes, t]
-    );
-  }
-
-  // Form saving actions
-  const [savingProfile, setSavingProfile] = useState(false);
   async function handleSaveProfile() {
     setSavingProfile(true);
     try {
-      const profileData = {
-        name: profileName,
-        email: profileEmail,
-        daily_apply_limit: Number(dailyLimit),
-      };
+      const profileData = { name: profileName, email: profileEmail, daily_apply_limit: Number(dailyLimit) };
+      const parsedDataUpdate = { name: profileName, email: profileEmail, phone: profilePhone, linkedin_url: linkedinUrl, github_url: githubUrl, portfolio_url: portfolioUrl, current_location: currentLocation, skills, current_role: currentRole, cover_letter: coverLetter };
 
-      const parsedDataUpdate = {
-        name: profileName,
-        email: profileEmail,
-        phone: profilePhone,
-        linkedin_url: linkedinUrl,
-        github_url: githubUrl,
-        portfolio_url: portfolioUrl,
-        current_location: currentLocation,
-        skills: skills,
-        current_role: currentRole,
-        cover_letter: coverLetter,
-      };
-
-      // 1. Run profile and resume updates in parallel
-      const updatePromises = [
-        authApi.updateProfile(profileData)
-      ];
-
-      if (resume && resume.id) {
-        updatePromises.push(
-          resumeApi.update(resume.id, { parsed_data: parsedDataUpdate })
-        );
-      }
+      const updatePromises = [authApi.updateProfile(profileData)];
+      if (resume?.id) updatePromises.push(resumeApi.update(resume.id, { parsed_data: parsedDataUpdate }));
 
       const [uRes] = await Promise.all(updatePromises);
-
-      // 2. Optimistic update to React state immediately
-      if (uRes && uRes.success) {
+      if (uRes?.success) {
         setUser(uRes.data);
         localStorage.setItem('applyai_user', JSON.stringify(uRes.data));
       }
-
-      if (resume) {
-        setResume({
-          ...resume,
-          parsed_data: {
-            ...resume.parsed_data,
-            ...parsedDataUpdate
-          }
-        });
-      }
-
-      // Also update overall stats for Experience and Role immediately
-      if (stats) {
-        setStats({
-          ...stats,
-          // Sync stats values if needed
-        });
-      }
+      if (resume) setResume({ ...resume, parsed_data: { ...resume.parsed_data, ...parsedDataUpdate } });
 
       showToast('Profile updated successfully!');
       setSubView('main');
@@ -366,30 +306,19 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     }
   }
 
-  const [savingPrefs, setSavingPrefs] = useState(false);
   async function handleSavePrefs() {
     setSavingPrefs(true);
     try {
       const updatedPrefs = {
-        target_roles: targetRoles,
-        target_locations: targetLocations,
-        min_salary: minSalary ? Number(minSalary) : null,
-        max_salary: maxSalary ? Number(maxSalary) : null,
-        job_types: preferredJobTypes,
-        experience_level: experienceLevel,
-        auto_apply_enabled: autoApplyEnabled,
-        min_match_score: Number(minMatchScore),
+        target_roles: targetRoles, target_locations: targetLocations,
+        min_salary: minSalary ? Number(minSalary) : null, max_salary: maxSalary ? Number(maxSalary) : null,
+        job_types: preferredJobTypes, experience_level: experienceLevel,
+        auto_apply_enabled: autoApplyEnabled, min_match_score: Number(minMatchScore),
         blacklisted_companies: blacklistedCompanies,
       };
-
       const res = await preferencesApi.update(updatedPrefs);
-      
-      // Update state locally immediately
       setPrefs(updatedPrefs);
-      if (res && res.completion) {
-        setCompletion(res.completion);
-      }
-
+      if (res?.completion) setCompletion(res.completion);
       showToast('Preferences updated successfully!');
       setSubView('main');
     } catch (err) {
@@ -399,12 +328,68 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     }
   }
 
+  // ── Sub-view routing ──────────────────────────────────────
+  const commonProps = { addTag, removeTag };
+
+  if (subView === 'profile') {
+    return (
+      <EditProfileView
+        {...commonProps}
+        profileName={profileName} setProfileName={setProfileName}
+        profileEmail={profileEmail} setProfileEmail={setProfileEmail}
+        profilePhone={profilePhone} setProfilePhone={setProfilePhone}
+        linkedinUrl={linkedinUrl} setLinkedinUrl={setLinkedinUrl}
+        githubUrl={githubUrl} setGithubUrl={setGithubUrl}
+        portfolioUrl={portfolioUrl} setPortfolioUrl={setPortfolioUrl}
+        currentLocation={currentLocation} setCurrentLocation={setCurrentLocation}
+        currentRole={currentRole} setCurrentRole={setCurrentRole}
+        coverLetter={coverLetter} setCoverLetter={setCoverLetter}
+        dailyLimit={dailyLimit} setDailyLimit={setDailyLimit}
+        skills={skills} setSkills={setSkills}
+        skillInput={skillInput} setSkillInput={setSkillInput}
+        resume={resume} uploadingResume={uploadingResume} fileInputRef={fileInputRef}
+        handleReparseResume={handleReparseResume}
+        handleDeleteResume={handleDeleteResume}
+        handleUploadResume={handleUploadResume}
+        savingProfile={savingProfile} handleSaveProfile={handleSaveProfile}
+        onBack={() => setSubView('main')}
+      />
+    );
+  }
+
+  if (subView === 'preferences') {
+    return (
+      <PreferencesView
+        {...commonProps}
+        targetRoles={targetRoles} setTargetRoles={setTargetRoles}
+        targetLocations={targetLocations} setTargetLocations={setTargetLocations}
+        targetLocationInput={targetLocationInput} setTargetLocationInput={setTargetLocationInput}
+        minSalary={minSalary} setMinSalary={setMinSalary}
+        maxSalary={maxSalary} setMaxSalary={setMaxSalary}
+        preferredJobTypes={preferredJobTypes} setPreferredJobTypes={setPreferredJobTypes}
+        experienceLevel={experienceLevel} setExperienceLevel={setExperienceLevel}
+        autoApplyEnabled={autoApplyEnabled} setAutoApplyEnabled={setAutoApplyEnabled}
+        minMatchScore={minMatchScore} setMinMatchScore={setMinMatchScore}
+        blacklistedCompanies={blacklistedCompanies} setBlacklistedCompanies={setBlacklistedCompanies}
+        blacklistInput={blacklistInput} setBlacklistInput={setBlacklistInput}
+        completion={completion}
+        savingPrefs={savingPrefs} handleSavePrefs={handleSavePrefs}
+        showToast={showToast}
+        onBack={() => setSubView('main')}
+      />
+    );
+  }
+
+  if (subView === 'privacy') {
+    return <PrivacyView showToast={showToast} onBack={() => setSubView('main')} />;
+  }
+
+  // ── Main View ─────────────────────────────────────────────
   const s = stats || { total_applied: 0, interviews: 0, total_matched: 0 };
   const role = resume?.parsed_data?.current_role || user?.role || 'Not specified';
   const loc = prefs?.target_locations?.[0] || 'Not specified';
   const experience = resume?.parsed_data?.total_experience_years !== undefined
-    ? `${resume.parsed_data.total_experience_years}yr`
-    : '0yr';
+    ? `${resume.parsed_data.total_experience_years}yr` : '0yr';
   const profilePct = resume ? 95 : 30;
 
   const menuItems = [
@@ -419,439 +404,6 @@ export default function ProfileScreen({ goTo, user, showToast, setUser, back, in
     { icon: 'ti-help', label: 'Help & Support', sub: 'FAQs, contact us', action: () => showToast('Support: support@jobpilot.dev') },
   ];
 
-  const Tag = ({ label, onRemove }) => (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--lime-dim)', color: 'var(--lime)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', padding: '3px 10px', fontSize: 11, fontWeight: 600 }}>
-      {label}
-      <i className="ti ti-x" style={{ fontSize: 9, cursor: 'pointer' }} onClick={onRemove} />
-    </span>
-  );
-
-  // Sub-views Rendering logic
-  if (subView === 'profile') {
-    return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <button className="bk-btn" onClick={() => setSubView('main')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="ti ti-arrow-left" style={{ fontSize: 18, color: 'var(--text1)' }} />
-          </button>
-          <span style={{ fontSize: 14, fontWeight: 850, color: 'var(--text1)', letterSpacing: -0.2 }}>Edit Profile</span>
-          <button
-            onClick={handleSaveProfile}
-            disabled={savingProfile}
-            style={{ background: 'var(--lime)', color: 'var(--bg)', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: savingProfile ? 'not-allowed' : 'pointer' }}
-          >
-            {savingProfile ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Full Name */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Full Name</div>
-            <input
-              value={profileName}
-              onChange={(e) => setProfileName(e.target.value)}
-              placeholder="e.g. Arun Reddy"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Email</div>
-            <input
-              value={profileEmail}
-              onChange={(e) => setProfileEmail(e.target.value)}
-              placeholder="e.g. arun@example.com"
-              type="email"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Phone Number</div>
-            <input
-              value={profilePhone}
-              onChange={(e) => setProfilePhone(e.target.value)}
-              placeholder="e.g. +91 9999999999"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Current Location */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Current Location</div>
-            <input
-              value={currentLocation}
-              onChange={(e) => setCurrentLocation(e.target.value)}
-              placeholder="e.g. Hyderabad, India"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Job Role */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Current Job Role</div>
-            <input
-              value={currentRole}
-              onChange={(e) => setCurrentRole(e.target.value)}
-              placeholder="e.g. Senior Software Engineer"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Social Links */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>LinkedIn URL</div>
-            <input
-              value={linkedinUrl}
-              onChange={(e) => setLinkedinUrl(e.target.value)}
-              placeholder="https://linkedin.com/in/username"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none', marginBottom: 8 }}
-            />
-
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>GitHub URL</div>
-            <input
-              value={githubUrl}
-              onChange={(e) => setGithubUrl(e.target.value)}
-              placeholder="https://github.com/username"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none', marginBottom: 8 }}
-            />
-
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Portfolio URL</div>
-            <input
-              value={portfolioUrl}
-              onChange={(e) => setPortfolioUrl(e.target.value)}
-              placeholder="https://portfolio.dev"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Skills */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Skills</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {skills.map((sk) => <Tag key={sk} label={sk} onRemove={() => removeTag(skills, setSkills, sk)} />)}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag(skills, setSkills, skillInput, setSkillInput)}
-                placeholder="Type a skill (e.g. React) and press Enter"
-                style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '9px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-              <button onClick={() => addTag(skills, setSkills, skillInput, setSkillInput)} style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', width: 36, height: 36, cursor: 'pointer', color: 'var(--lime)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-plus" />
-              </button>
-            </div>
-          </div>
-
-          {/* Daily limit */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Daily Limit</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>{dailyLimit} apps/day</div>
-            </div>
-            <input type="range" min={1} max={5} value={dailyLimit} onChange={(e) => setDailyLimit(+e.target.value)} style={{ width: '100%' }} />
-          </div>
-
-          {/* Cover Letter */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Cover Letter Instructions / Prompt</div>
-            <textarea
-              value={coverLetter}
-              onChange={(e) => setCoverLetter(e.target.value)}
-              placeholder="Provide specific notes or instructions to customize the AI cover letter. Example: 'Focus on my 3 years of Kubernetes experience and highlight my AWS certification.'"
-              style={{ width: '100%', height: 100, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '12px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none', resize: 'vertical', lineHeight: 1.5 }}
-            />
-          </div>
-
-          {/* Resume Upload section */}
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>Active Resume File</div>
-            {resume ? (
-              <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <i className="ti ti-file-text" style={{ fontSize: 28, color: 'var(--lime)' }} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{resume.file_name}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>Uploaded on {new Date(resume.created_at).toLocaleDateString()}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={handleReparseResume} style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', color: 'var(--text1)', borderRadius: 'var(--radius-full)', padding: '8px 0', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                    <i className="ti ti-refresh" /> Reparse (AI)
-                  </button>
-                  <button onClick={handleDeleteResume} style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#F87171', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <i className="ti ti-trash" /> Delete
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, background: 'var(--bg2)', border: '2px dashed var(--border2)', borderRadius: 'var(--radius-lg)', padding: '24px', cursor: 'pointer', textAlign: 'center' }}
-              >
-                <i className="ti ti-upload" style={{ fontSize: 30, color: 'var(--text3)' }} />
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text1)' }}>Upload Resume PDF</div>
-                  <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 2 }}>Must be PDF format (max 10MB)</div>
-                </div>
-              </div>
-            )}
-            <input type="file" ref={fileInputRef} accept=".pdf" style={{ display: 'none' }} onChange={handleUploadResume} />
-          </div>
-
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 10, paddingTop: 10 }}>
-            <button onClick={() => setSubView('main')} style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', color: 'var(--text2)', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSaveProfile} disabled={savingProfile} style={{ flex: 1.5, background: 'var(--lime)', color: 'var(--bg)', border: 'none', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 800, cursor: savingProfile ? 'not-allowed' : 'pointer' }}>
-              {savingProfile ? 'Saving...' : 'Save Profile'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (subView === 'preferences') {
-    return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <button className="bk-btn" onClick={() => setSubView('main')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="ti ti-arrow-left" style={{ fontSize: 18, color: 'var(--text1)' }} />
-          </button>
-          <span style={{ fontSize: 14, fontWeight: 850, color: 'var(--text1)', letterSpacing: -0.2 }}>Preferences</span>
-          <button
-            onClick={handleSavePrefs}
-            disabled={savingPrefs}
-            style={{ background: 'var(--lime)', color: 'var(--bg)', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: savingPrefs ? 'not-allowed' : 'pointer' }}
-          >
-            {savingPrefs ? 'Saving...' : 'Save'}
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Auto-apply toggle */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Auto-Apply Enabled</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>Requires 100% profile completion ({completion?.percent || 0}% complete)</div>
-            </div>
-            <button
-              onClick={() => {
-                if (!autoApplyEnabled && (!completion || !completion.isComplete)) {
-                  showToast(`Profile is only ${completion?.percent || 0}% complete. Fill all fields to enable Auto-Apply: ${completion?.missing?.join(', ') || 'Upload resume, set social URLs, and complete details'}`);
-                  return;
-                }
-                setAutoApplyEnabled(!autoApplyEnabled);
-              }}
-              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: autoApplyEnabled ? 'var(--lime)' : 'var(--bg3)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
-            >
-              <span style={{ position: 'absolute', width: 16, height: 16, background: autoApplyEnabled ? 'var(--bg)' : 'var(--text3)', borderRadius: '50%', top: 4, left: autoApplyEnabled ? 24 : 4, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-
-          {/* Target Role */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Target Role</div>
-            <input
-              value={targetRoles[0] || ''}
-              onChange={(e) => setTargetRoles(e.target.value ? [e.target.value] : [])}
-              placeholder="e.g. Frontend Developer"
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '11px 16px', color: 'var(--text1)', fontSize: 13, fontFamily: 'inherit', outline: 'none' }}
-            />
-          </div>
-
-          {/* Preferred Locations */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Preferred Locations</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {targetLocations.map((l) => <Tag key={l} label={l} onRemove={() => removeTag(targetLocations, setTargetLocations, l)} />)}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={targetLocationInput}
-                onChange={(e) => setTargetLocationInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag(targetLocations, setTargetLocations, targetLocationInput, setTargetLocationInput)}
-                placeholder="e.g. Remote, Bangalore"
-                style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '9px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-              <button onClick={() => addTag(targetLocations, setTargetLocations, targetLocationInput, setTargetLocationInput)} style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', width: 36, height: 36, cursor: 'pointer', color: 'var(--lime)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-plus" />
-              </button>
-            </div>
-          </div>
-
-          {/* Salary limits */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Min Salary (INR / yr)</div>
-              <input
-                value={minSalary}
-                onChange={(e) => setMinSalary(e.target.value)}
-                placeholder="e.g. 800000"
-                type="number"
-                style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Max Salary (INR / yr)</div>
-              <input
-                value={maxSalary}
-                onChange={(e) => setMaxSalary(e.target.value)}
-                placeholder="e.g. 1500000"
-                type="number"
-                style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-            </div>
-          </div>
-
-          {/* Job Types */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Job Types</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {['Full-time', 'Part-time', 'Contract', 'Remote', 'Internship'].map((t) => {
-                const key = t.replace('-', '_').toUpperCase();
-                const active = preferredJobTypes.includes(key);
-                return (
-                  <button key={t} onClick={() => toggleJobType(key)} style={{ padding: '6px 14px', borderRadius: 'var(--radius-full)', fontSize: 11, fontWeight: 600, border: '1.5px solid', cursor: 'pointer', fontFamily: 'inherit', background: active ? 'var(--lime)' : 'var(--bg2)', color: active ? 'var(--bg)' : 'var(--text2)', borderColor: active ? 'var(--lime)' : 'var(--border)', transition: 'all 0.2s' }}>
-                    {t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Experience level select */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Experience Level</div>
-            <select
-              value={experienceLevel}
-              onChange={(e) => setExperienceLevel(e.target.value)}
-              style={{ width: '100%', background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '11px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-            >
-              <option value="ENTRY">Entry Level</option>
-              <option value="MID">Mid Level</option>
-              <option value="SENIOR">Senior Level</option>
-              <option value="LEAD">Team Lead</option>
-              <option value="EXECUTIVE">Executive / Director</option>
-            </select>
-          </div>
-
-          {/* Min Match Score */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Min Match Score</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--lime)' }}>{minMatchScore}%</div>
-            </div>
-            <input type="range" min={50} max={95} step={5} value={minMatchScore} onChange={(e) => setMinMatchScore(+e.target.value)} style={{ width: '100%' }} />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text3)', marginTop: 4, fontWeight: 600 }}>
-              <span>50% Low</span><span>75% Med</span><span>95% High</span>
-            </div>
-          </div>
-
-          {/* Blacklisted companies */}
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Blacklisted Companies (will not apply)</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              {blacklistedCompanies.map((c) => <Tag key={c} label={c} onRemove={() => removeTag(blacklistedCompanies, setBlacklistedCompanies, c)} />)}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input
-                value={blacklistInput}
-                onChange={(e) => setBlacklistInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addTag(blacklistedCompanies, setBlacklistedCompanies, blacklistInput, setBlacklistInput)}
-                placeholder="e.g. Competitor Corp"
-                style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', borderRadius: 'var(--radius-full)', padding: '9px 14px', color: 'var(--text1)', fontSize: 12, fontFamily: 'inherit', outline: 'none' }}
-              />
-              <button onClick={() => addTag(blacklistedCompanies, setBlacklistedCompanies, blacklistInput, setBlacklistInput)} style={{ background: 'var(--lime-dim)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-full)', width: 36, height: 36, cursor: 'pointer', color: 'var(--lime)', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <i className="ti ti-plus" />
-              </button>
-            </div>
-          </div>
-
-          {/* Save buttons */}
-          <div style={{ display: 'flex', gap: 10, paddingTop: 10 }}>
-            <button onClick={() => setSubView('main')} style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', color: 'var(--text2)', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleSavePrefs} disabled={savingPrefs} style={{ flex: 1.5, background: 'var(--lime)', color: 'var(--bg)', border: 'none', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 800, cursor: savingPrefs ? 'not-allowed' : 'pointer' }}>
-              {savingPrefs ? 'Saving...' : 'Save Preferences'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (subView === 'privacy') {
-    return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-          <button className="bk-btn" onClick={() => setSubView('main')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <i className="ti ti-arrow-left" style={{ fontSize: 18, color: 'var(--text1)' }} />
-          </button>
-          <span style={{ fontSize: 14, fontWeight: 850, color: 'var(--text1)', letterSpacing: -0.2 }}>Privacy Settings</span>
-          <button
-            onClick={() => { showToast('Privacy settings saved!'); setSubView('main'); }}
-            style={{ background: 'var(--lime)', color: 'var(--bg)', border: 'none', borderRadius: 'var(--radius-full)', padding: '8px 16px', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
-          >
-            Save
-          </button>
-        </div>
-
-        {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Recruiter Visibility */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Profile Visibility</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4, lineHeight: 1.4 }}>Allow verified recruiters to find your resume profile</div>
-            </div>
-            <button
-              onClick={() => setRecruiterVisibility(!recruiterVisibility)}
-              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: recruiterVisibility ? 'var(--lime)' : 'var(--bg3)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
-            >
-              <span style={{ position: 'absolute', width: 16, height: 16, background: recruiterVisibility ? 'var(--bg)' : 'var(--text3)', borderRadius: '50%', top: 4, left: recruiterVisibility ? 24 : 4, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-
-          {/* Incognito Mode */}
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text1)' }}>Incognito Apply Mode</div>
-              <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 4, lineHeight: 1.4 }}>Mask real email with a proxy address on generic apply forms</div>
-            </div>
-            <button
-              onClick={() => setIncognitoMode(!incognitoMode)}
-              style={{ width: 44, height: 24, borderRadius: 12, border: 'none', background: incognitoMode ? 'var(--lime)' : 'var(--bg3)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
-            >
-              <span style={{ position: 'absolute', width: 16, height: 16, background: incognitoMode ? 'var(--bg)' : 'var(--text3)', borderRadius: '50%', top: 4, left: incognitoMode ? 24 : 4, transition: 'left 0.2s' }} />
-            </button>
-          </div>
-
-          <div style={{ background: 'rgba(225, 62, 62, 0.04)', border: '1px solid var(--border2)', borderRadius: 'var(--radius-md)', padding: 14, fontSize: 11, color: 'var(--text2)', lineHeight: 1.6 }}>
-            <i className="ti ti-info-circle" style={{ color: 'var(--lime)', marginRight: 6 }} />
-            Privacy settings apply automatically across all browser agents executing applications. Masking your email might delay some notifications from employers who do not parse redirect logs correctly.
-          </div>
-
-          {/* Save & cancel */}
-          <div style={{ display: 'flex', gap: 10, marginTop: 'auto', paddingTop: 20 }}>
-            <button onClick={() => setSubView('main')} style={{ flex: 1, background: 'var(--bg2)', border: '1.5px solid var(--border)', color: 'var(--text2)', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-            <button onClick={() => { showToast('Privacy settings saved!'); setSubView('main'); }} style={{ flex: 1.5, background: 'var(--lime)', color: 'var(--bg)', border: 'none', padding: '13px 0', borderRadius: 'var(--radius-full)', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Save Settings</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // DEFAULT MAIN VIEW
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
       {/* Hero section */}
