@@ -137,12 +137,28 @@ async function reparseResume(resumeId, userId) {
 }
 
 /**
- * Get active resume for a user
+ * Get active resume for a user.
+ * Falls back to the most-recent resume if no explicitly active one exists.
  */
 async function getActiveResume(userId) {
-  return prisma.resume.findFirst({
+  // First try to get the explicitly active resume
+  const active = await prisma.resume.findFirst({
     where: { user_id: userId, is_active: true },
     orderBy: { created_at: 'desc' },
+  });
+  if (active) return active;
+
+  // Fallback: auto-activate the most recent resume so the user isn't stuck
+  const latest = await prisma.resume.findFirst({
+    where: { user_id: userId },
+    orderBy: { created_at: 'desc' },
+  });
+  if (!latest) return null;
+
+  logger.info(`⏰ Auto-activating latest resume ${latest.id} for user ${userId}`);
+  return prisma.resume.update({
+    where: { id: latest.id },
+    data: { is_active: true },
   });
 }
 

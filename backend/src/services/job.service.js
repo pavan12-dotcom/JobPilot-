@@ -8,6 +8,17 @@ const logger = require('../utils/logger');
 const JOB_EXPIRY_DAYS = 30;
 const REQUEST_TIMEOUT = 12000;
 
+// ── LinkedIn Health Tracking ─────────────────────────────────────────────────
+let linkedInFailStreak = 0;
+const LINKEDIN_DEGRADE_THRESHOLD = 3;
+
+function getLinkedInHealth() {
+  return {
+    streak: linkedInFailStreak,
+    status: linkedInFailStreak >= LINKEDIN_DEGRADE_THRESHOLD ? 'DEGRADED' : 'OK',
+  };
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function calcExpiresAt(postedAt) {
@@ -104,35 +115,42 @@ async function fetchFromAdzuna(targetRoles = [], locations = []) {
   return jobs;
 }
 
-// ── Remotive ─────────────────────────────────────────────────────────────────
+// ── Remotive ────────────────────────────────────────────────────────────────────────
 
 async function fetchFromRemotive(targetRoles = []) {
-  try {
-    const { data } = await axios.get(env.REMOTIVE_API_URL, {
-      params: { search: targetRoles[0] || 'software engineer', limit: 30 },
-      timeout: REQUEST_TIMEOUT,
-    });
-    return (data.jobs || []).map((job) => {
-      const postedAt = job.publication_date ? new Date(job.publication_date) : new Date();
-      return {
-        external_id: `remotive_${job.id}`,
-        source: 'REMOTIVE',
-        title: job.title,
-        company: job.company_name,
-        location: job.candidate_required_location || 'Remote',
-        job_type: 'REMOTE',
-        description: stripHtml(job.description || ''),
-        requirements: '',
-        salary_min: null, salary_max: null,
-        apply_url: job.url,
-        posted_at: postedAt,
-        expires_at: calcExpiresAt(postedAt),
-      };
-    });
-  } catch (err) {
-    logger.error('Remotive failed:', err.message);
-    return [];
+  const jobs = [];
+  const rolesToFetch = targetRoles.slice(0, 3).length > 0 ? targetRoles.slice(0, 3) : ['software engineer'];
+  for (const role of rolesToFetch) {
+    try {
+      const { data } = await axios.get(env.REMOTIVE_API_URL, {
+        params: { search: role, limit: 50 },
+        timeout: REQUEST_TIMEOUT,
+      });
+      const fetched = (data.jobs || []).map((job) => {
+        const postedAt = job.publication_date ? new Date(job.publication_date) : new Date();
+        return {
+          external_id: `remotive_${job.id}`,
+          source: 'REMOTIVE',
+          title: job.title,
+          company: job.company_name,
+          location: job.candidate_required_location || 'Remote',
+          job_type: 'REMOTE',
+          description: stripHtml(job.description || ''),
+          requirements: '',
+          salary_min: null, salary_max: null,
+          apply_url: job.url,
+          posted_at: postedAt,
+          expires_at: calcExpiresAt(postedAt),
+        };
+      });
+      logger.info(`  Remotive "${role}": ${fetched.length} jobs`);
+      jobs.push(...fetched);
+      await new Promise((r) => setTimeout(r, 500));
+    } catch (err) {
+      logger.error(`Remotive failed for "${role}":`, err.message);
+    }
   }
+  return jobs;
 }
 
 // ── The Muse ─────────────────────────────────────────────────────────────────
@@ -169,10 +187,12 @@ async function fetchFromTheMuse(targetRoles = []) {
 function mapRoleToMuseCategory(role = '') {
   const r = role.toLowerCase();
   if (r.includes('software') || r.includes('engineer') || r.includes('developer')) return 'Software Engineer';
-  if (r.includes('data') || r.includes('ml') || r.includes('ai')) return 'Data Science';
+  if (r.includes('data') || r.includes('analyst') || r.includes('ml') || r.includes('ai')) return 'Data Science';
   if (r.includes('devops') || r.includes('cloud')) return 'DevOps & Sysadmin';
   if (r.includes('product')) return 'Product';
   if (r.includes('design')) return 'Design & UX';
+  if (r.includes('health') || r.includes('clinical') || r.includes('medical') || r.includes('nurse')) return 'Healthcare';
+  if (r.includes('finance') || r.includes('account')) return 'Finance';
   return 'Software Engineer';
 }
 
@@ -238,7 +258,27 @@ async function fetchFromLinkedIn(targetRoles = [], locations = []) {
           });
         }
 
-        logger.info(`🔗 LinkedIn: found ${jobs.length} jobs for "${role}"`);
+        // ── Health check: track consecutive empty scrape results ─────────────
+        const foundForThisBatch = Math.min(jobIdMatches.length, titleMatches.length);
+        if (foundForThisBatch === 0) {
+          linkedInFailStreak++;
+          logger.warn(
+            `⚠️ LinkedIn: 0 jobs parsed for "${role}" in "${location}" ` +
+            `(fail streak: ${linkedInFailStreak}/${LINKEDIN_DEGRADE_THRESHOLD}). ` +
+            `HTML snippet: ${html.substring(0, 300).replace(/\s+/g, ' ')}`
+          );
+          if (linkedInFailStreak >= LINKEDIN_DEGRADE_THRESHOLD) {
+            logger.warn(
+              '🚨 LINKEDIN_SCRAPE_DEGRADED — LinkedIn HTML structure may have changed. ' +
+              'Manual inspection of the guest search endpoint is required.'
+            );
+          }
+        } else {
+          // Reset streak on any successful parse
+          linkedInFailStreak = 0;
+        }
+
+        logger.info(`🔗 LinkedIn: found ${foundForThisBatch} jobs for "${role}" in "${location}"`);
         await new Promise((r) => setTimeout(r, 1500));
       } catch (err) {
         logger.error(`LinkedIn failed for "${role}" / "${location}":`, err.message);
@@ -249,8 +289,12 @@ async function fetchFromLinkedIn(targetRoles = [], locations = []) {
 }
 
 // ── Indeed via RemoteOK ──────────────────────────────────────────────────────
-// RemoteOK public API — 100+ live remote tech jobs, no key required.
-// Confirmed working. Tagged as INDEED to fill that platform slot.
+// NOTE: Despite the function name and DB source enum value ('INDEED'), this
+// fetcher actually pulls from RemoteOK (remoteok.com), a free public API with
+// 100+ live remote tech jobs and no API key required.
+// The enum value 'INDEED' is preserved to avoid a Prisma DB migration.
+// The frontend displays this as "RemoteOK" using lib/sourceLabels.js.
+
 
 async function fetchFromIndeed(targetRoles = [], locations = []) {
   const jobs = [];
@@ -300,52 +344,55 @@ async function fetchFromIndeed(targetRoles = [], locations = []) {
   return jobs;
 }
 
-// ── Naukri via Jobicy ────────────────────────────────────────────────────────
+// ── Naukri via Jobicy ─────────────────────────────────────────────────────────────
 // Naukri's API requires reCAPTCHA. We use Jobicy (free, no key needed)
 // which aggregates real remote roles. Tagged NAUKRI for the platform UI.
 
 async function fetchFromNaukri(targetRoles = [], locations = []) {
   const jobs = [];
-  try {
-    const role = targetRoles[0] || 'software engineer';
-    logger.info(`🇮🇳 Naukri/Jobicy: fetching jobs for "${role}"...`);
-    const params = { count: 30 };
-    const keyword = role.split(' ')[0].toLowerCase();
-    if (keyword && keyword !== 'software' && keyword !== 'engineer') {
-      params.tag = keyword;
-    }
+  const rolesToFetch = targetRoles.slice(0, 2).length > 0 ? targetRoles.slice(0, 2) : ['software engineer'];
+  for (const role of rolesToFetch) {
+    try {
+      logger.info(`🇮🇳 Naukri/Jobicy: fetching jobs for "${role}"...`);
+      const params = { count: 50 };
+      // Use first meaningful keyword as tag (skip generic short words)
+      const words = role.toLowerCase().split(' ').filter(w => w.length > 3 && !['and', 'the', 'for', 'with'].includes(w));
+      const keyword = words[0] || '';
+      if (keyword) params.tag = keyword;
 
-    const { data } = await axios.get('https://jobicy.com/api/v2/remote-jobs', {
-      params,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-      timeout: REQUEST_TIMEOUT,
-    });
-
-    const jobList = data?.jobs || [];
-    logger.info(`🇮🇳 Jobicy: ${jobList.length} jobs returned`);
-
-    for (const job of jobList) {
-      const postedAt = job.pubDate ? new Date(job.pubDate) : new Date();
-      jobs.push({
-        external_id: `naukri_jobicy_${job.id || String(Math.random()).slice(2, 12)}`,
-        source: 'NAUKRI',
-        title: job.jobTitle || role,
-        company: job.companyName || 'Unknown Company',
-        location: job.jobGeo || 'Remote',
-        job_type: 'REMOTE',
-        description: stripHtml(job.jobExcerpt || job.jobDescription || `${job.jobTitle} at ${job.companyName}`).substring(0, 2000),
-        requirements: Array.isArray(job.jobType) ? job.jobType.join(', ') : (job.jobType || ''),
-        salary_min: null, salary_max: null,
-        apply_url: job.url || `https://jobicy.com/jobs/${job.id}`,
-        posted_at: postedAt,
-        expires_at: calcExpiresAt(postedAt),
+      const { data } = await axios.get('https://jobicy.com/api/v2/remote-jobs', {
+        params,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        },
+        timeout: REQUEST_TIMEOUT,
       });
+
+      const jobList = data?.jobs || [];
+      logger.info(`🇮🇳 Jobicy "${role}": ${jobList.length} jobs returned`);
+
+      for (const job of jobList) {
+        const postedAt = job.pubDate ? new Date(job.pubDate) : new Date();
+        jobs.push({
+          external_id: `naukri_jobicy_${job.id || String(Math.random()).slice(2, 12)}`,
+          source: 'NAUKRI',
+          title: job.jobTitle || role,
+          company: job.companyName || 'Unknown Company',
+          location: job.jobGeo || 'Remote',
+          job_type: 'REMOTE',
+          description: stripHtml(job.jobExcerpt || job.jobDescription || `${job.jobTitle} at ${job.companyName}`).substring(0, 2000),
+          requirements: Array.isArray(job.jobType) ? job.jobType.join(', ') : (job.jobType || ''),
+          salary_min: null, salary_max: null,
+          apply_url: job.url || `https://jobicy.com/jobs/${job.id}`,
+          posted_at: postedAt,
+          expires_at: calcExpiresAt(postedAt),
+        });
+      }
+      await new Promise((r) => setTimeout(r, 500));
+    } catch (err) {
+      logger.error(`Naukri/Jobicy failed for "${role}":`, err.message);
     }
-  } catch (err) {
-    logger.error(`Naukri/Jobicy failed:`, err.message);
   }
   return jobs;
 }
@@ -506,4 +553,5 @@ module.exports = {
   fetchFromLinkedIn,
   fetchFromIndeed,
   fetchFromNaukri,
+  getLinkedInHealth,
 };

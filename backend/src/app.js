@@ -68,7 +68,20 @@ app.use('/api/', rateLimit({
 
 // ── Health Check ─────────────────────────────────────────────
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', version: '1.0.0', timestamp: new Date() });
+  let linkedInHealth = { streak: 0, status: 'OK' };
+  try {
+    const { getLinkedInHealth } = require('./services/job.service');
+    linkedInHealth = getLinkedInHealth();
+  } catch (_) {}
+
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
+    timestamp: new Date(),
+    scrapers: {
+      linkedin: linkedInHealth,
+    },
+  });
 });
 
 // ── Bull Board (Queue Monitor UI) ───────────────────────────
@@ -166,11 +179,20 @@ async function startServer() {
 
       // FALLBACK: If Redis is unavailable, start a setInterval loop to fetch & match jobs every hour
       logger.info('⏰ Starting local fallback setInterval loop for hourly fetches');
+      let isFetchRunning = false; // Lock: prevents overlapping concurrent fetch runs
+
       setInterval(async () => {
+        if (isFetchRunning) {
+          logger.warn('⏰ Skipping fallback fetch tick — previous run still in progress');
+          return;
+        }
+        isFetchRunning = true;
         logger.info('⏰ Running fallback periodic hourly job fetch');
         try {
           const prisma = require('./db/prisma');
           const jobService = require('./services/job.service');
+          const { scoreJobMatch } = require('./ai/jobMatcher');
+
           const users = await prisma.user.findMany({
             include: { preferences: true },
             where: { preferences: { isNot: null } },
@@ -178,25 +200,51 @@ async function startServer() {
           
           for (const user of users) {
             if (!user.preferences) continue;
-            const resume = await prisma.resume.findFirst({ where: { user_id: user.id, is_active: true } });
-            if (!resume || !resume.parsed_data) continue;
-            
-            await jobService.fetchJobsForUser(user.preferences);
-            
-            // Score unmatched jobs
+
+            // ── Step 1: Fetch jobs regardless of resume status ──
+            try {
+              const stats = await jobService.fetchJobsForUser(user.preferences);
+              logger.info(`⏰ Fetch for ${user.email}: ${stats.created} new, ${stats.updated} refreshed`);
+            } catch (fetchErr) {
+              logger.error(`⏰ Fetch failed for ${user.email}:`, fetchErr.message);
+            }
+
+            // ── Step 2: Get resume — active first, then fall back to most-recent ──
+            let resume = await prisma.resume.findFirst({
+              where: { user_id: user.id, is_active: true },
+              orderBy: { created_at: 'desc' },
+            });
+
+            if (!resume) {
+              // Auto-activate the most recent resume so the user isn't stuck
+              const latest = await prisma.resume.findFirst({
+                where: { user_id: user.id },
+                orderBy: { created_at: 'desc' },
+              });
+              if (latest) {
+                await prisma.resume.update({ where: { id: latest.id }, data: { is_active: true } });
+                resume = { ...latest, is_active: true };
+                logger.info(`⏰ Auto-activated resume ${latest.id} for ${user.email}`);
+              }
+            }
+
+            if (!resume || !resume.parsed_data) {
+              logger.warn(`⏰ No resume with parsed data for ${user.email} — skipping match step`);
+              continue;
+            }
+
+            // ── Step 3: Score unmatched jobs (paginated, up to 100 per cycle) ──
             const unmatched = await prisma.job.findMany({
               where: {
                 is_active: true,
-                job_matches: {
-                  none: {
-                    user_id: user.id,
-                  },
-                },
+                job_matches: { none: { user_id: user.id } },
               },
-              take: 20,
+              orderBy: { created_at: 'desc' },
+              take: 100,
             });
-            
-            const { scoreJobMatch } = require('./ai/jobMatcher');
+
+            logger.info(`⏰ Scoring ${unmatched.length} unmatched jobs for ${user.email}`);
+            let matched = 0;
             for (const j of unmatched) {
               try {
                 const matchResult = await scoreJobMatch(resume.parsed_data, j);
@@ -209,11 +257,17 @@ async function startServer() {
                     match_reasons: matchResult,
                   },
                 });
-              } catch (matchErr) {}
+                matched++;
+              } catch (matchErr) {
+                logger.error(`⏰ Match failed for job ${j.id}:`, matchErr.message);
+              }
             }
+            logger.info(`⏰ Created ${matched} new matches for ${user.email}`);
           }
         } catch (fetchErr) {
           logger.error('Fallback periodic fetch failed:', fetchErr.message);
+        } finally {
+          isFetchRunning = false; // Always release the lock
         }
       }, 60 * 60 * 1000); // 1 hour
     }
