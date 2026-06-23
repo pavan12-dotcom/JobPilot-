@@ -24,6 +24,28 @@ function getFallbackResponse(prompt, systemPrompt = '', expectJson = false) {
   const combinedPrompt = (prompt + ' ' + systemPrompt).toLowerCase();
 
   if (expectJson) {
+    if (combinedPrompt.includes('match') || combinedPrompt.includes('score') || combinedPrompt.includes('fit') || combinedPrompt.includes('alignment')) {
+      return {
+        match_score: 85,
+        skills_matched: ["JavaScript", "Node.js", "React"],
+        skills_missing: ["Go"],
+        experience_fit: "good",
+        role_alignment: "strong",
+        summary: "The candidate has strong matching skills in JavaScript and Node.js with 3 years of experience, aligning well with the requirements.",
+        ats_breakdown: {
+          keyword_match: 80,
+          skills_alignment: 85,
+          formatting_score: 90,
+          experience_score: 80,
+          resume_optimization_tips: [
+            "Highlight core backend/frontend frameworks and system design patterns.",
+            "Quantify impact on performance with metrics.",
+            "Emphasize database management and cloud infrastructure experience."
+          ]
+        }
+      };
+    }
+
     if (combinedPrompt.includes('resume') || combinedPrompt.includes('parser') || combinedPrompt.includes('candidate')) {
       return {
         name: "Alex Kumar",
@@ -40,17 +62,6 @@ function getFallbackResponse(prompt, systemPrompt = '', expectJson = false) {
         currentRole: "Software Engineer",
         preferredRoles: ["Software Engineer", "Full Stack Developer", "Backend Developer"],
         summary: "Experienced software engineer with a focus on web applications and automation."
-      };
-    }
-
-    if (combinedPrompt.includes('match') || combinedPrompt.includes('score') || combinedPrompt.includes('fit') || combinedPrompt.includes('alignment')) {
-      return {
-        match_score: 85,
-        skills_matched: ["JavaScript", "Node.js", "React"],
-        skills_missing: ["Go"],
-        experience_fit: "good",
-        role_alignment: "strong",
-        summary: "The candidate has strong matching skills in JavaScript and Node.js with 3 years of experience, aligning well with the requirements."
       };
     }
 
