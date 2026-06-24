@@ -10,8 +10,38 @@ const { sendApplied, sendCaptchaAlert } = require('../services/notification.serv
 const { launchBrowser, humanDelay } = require('../automation/browser');
 const { detectSiteAndApply, scrollAndClickApply, scrollPage } = require('../automation/sites/generic');
 const { detectCaptcha, detectLoginWall } = require('../automation/captcha');
+const { broadcastToUser } = require('../services/websocket.service');
 const logger = require('../utils/logger');
 
+// ── Real-time progress helper ─────────────────────────────────────────────────
+/**
+ * Broadcast a live progress event to the user's WebSocket connection AND
+ * persist it as an application log so the terminal view has a full history.
+ *
+ * @param {string} applicationId
+ * @param {string} userId
+ * @param {string} message    - Human-readable log line (shown in terminal)
+ * @param {Object} [metadata] - Optional structured metadata
+ */
+async function progress(applicationId, userId, message, metadata = {}) {
+  logger.info(`[AutoApply ${applicationId}] ${message}`);
+  // Persist to DB (also triggers WS broadcast inside logEvent)
+  try {
+    await applicationService.logEvent(applicationId, message, metadata);
+  } catch (err) {
+    // Non-fatal — don't let a DB write failure abort the apply flow
+    logger.warn(`[AutoApply] Could not persist log event: ${err.message}`);
+    // Still broadcast even if DB write fails
+    try {
+      broadcastToUser(userId, 'application-log-added', {
+        applicationId,
+        log: { event: message, metadata, created_at: new Date().toISOString() },
+      });
+    } catch (_) {}
+  }
+}
+
+// ── Selector builder ──────────────────────────────────────────────────────────
 /**
  * Build the most reliable CSS selector for a form field using a priority cascade:
  *   1. name attribute  (most stable — survives React re-renders)
@@ -32,6 +62,7 @@ function buildBestSelector(field) {
   return null;
 }
 
+// ── Resume downloader ─────────────────────────────────────────────────────────
 /**
  * Resolves local file path of the resume, downloading if necessary, or falling back to a mock PDF.
  */
@@ -91,6 +122,7 @@ async function getLocalResumePath(resume) {
   return localPath;
 }
 
+// ── STAGE 1: Prepare Draft ────────────────────────────────────────────────────
 /**
  * Stage 1: Preparation Worker
  * Scans page fields, invokes Gemini to prefill answers, and saves a draft in DB.
@@ -114,15 +146,27 @@ async function processPrepareDraft(job) {
     if (application.status === 'READY_FOR_REVIEW') return { skipped: true };
 
     const { job: jobRecord, resume, user, match } = application;
-    logger.info(`📝 Preparing application draft for ${jobRecord.title} at ${jobRecord.company}`);
 
-    await applicationService.logEvent(applicationId, 'Draft preparation started');
+    // ── Fix 2: Enforce daily apply limit before launching browser ────────────
+    const limitCheck = await applicationService.checkDailyLimit(user.id);
+    if (limitCheck.exceeded) {
+      const reason = `Daily apply limit reached (${limitCheck.count}/${limitCheck.limit} today)`;
+      logger.warn(`[AutoApply] ${reason} for ${user.email} — aborting`);
+      await applicationService.updateStatus(applicationId, 'system', 'FAILED', {
+        failure_reason: reason,
+      });
+      return { skipped: true, reason };
+    }
 
-    // Launch Playwright browser in headless mode for parsing
+    await progress(applicationId, user.id, `📋 Starting draft preparation for "${jobRecord.title}" at ${jobRecord.company}`);
+
+    // ── Launch Playwright browser ────────────────────────────────────────────
+    await progress(applicationId, user.id, '🚀 Launching headless browser...');
     browser = await launchBrowser(true);
     const page = await browser.newPage();
 
     // Navigate to job page
+    await progress(applicationId, user.id, `🌐 Navigating to job page: ${jobRecord.apply_url}`);
     await page.goto(jobRecord.apply_url, { waitUntil: 'domcontentloaded', timeout: 45000 });
     await humanDelay(3000, 5000);
 
@@ -131,14 +175,14 @@ async function processPrepareDraft(job) {
     const embeddedFrame = page.frames().find(f => {
       const name = f.name() || '';
       const url = f.url() || '';
-      return name === 'mnhembedded' || 
-             url.includes('mynexthire.com') || 
-             url.includes('darwinbox') || 
+      return name === 'mnhembedded' ||
+             url.includes('mynexthire.com') ||
+             url.includes('darwinbox') ||
              url.includes('phenom');
     });
     if (embeddedFrame) {
       targetPage = embeddedFrame;
-      await applicationService.logEvent(applicationId, 'Embedded frame detected. Swapped context to frame.');
+      await progress(applicationId, user.id, `🖼️ Embedded careers frame detected — switching automation context`);
     }
 
     // Check for CAPTCHA/Login Wall
@@ -156,17 +200,19 @@ async function processPrepareDraft(job) {
     await humanDelay(1000, 1500);
 
     // Click "Apply" / direct action if necessary to open form
+    await progress(applicationId, user.id, '🔍 Searching for Apply button...');
     const clickedApply = await scrollAndClickApply(targetPage, (msg) => logger.debug(msg));
     if (clickedApply) {
+      await progress(applicationId, user.id, '✅ Apply button clicked — waiting for form to load...');
       await humanDelay(4000, 6000);
 
       // Re-detect active frame context
       const activeFrame = page.frames().find(f => {
         const name = f.name() || '';
         const url = f.url() || '';
-        return name === 'mnhembedded' || 
-               url.includes('mynexthire.com') || 
-               url.includes('darwinbox') || 
+        return name === 'mnhembedded' ||
+               url.includes('mynexthire.com') ||
+               url.includes('darwinbox') ||
                url.includes('phenom');
       });
       if (activeFrame) {
@@ -175,6 +221,7 @@ async function processPrepareDraft(job) {
     }
 
     // Generate cover letter
+    await progress(applicationId, user.id, '✍️ Generating AI cover letter...');
     let coverLetter = '';
     try {
       coverLetter = await generateCoverLetter(
@@ -182,8 +229,10 @@ async function processPrepareDraft(job) {
         jobRecord,
         match?.match_reasons,
       );
+      await progress(applicationId, user.id, '✅ Cover letter generated');
     } catch (err) {
       logger.warn('Cover letter generation failed:', err.message);
+      await progress(applicationId, user.id, `⚠️ Cover letter generation failed (${err.message}) — continuing without it`);
     }
 
     // Scan form fields on current screen
@@ -193,6 +242,8 @@ async function processPrepareDraft(job) {
     let formData = {};
 
     while (step < maxSteps) {
+      await progress(applicationId, user.id, `🔍 Scanning form fields (step ${step + 1}/${maxSteps})...`);
+
       const fields = await targetPage.$$eval(
         'input:not([type="hidden"]):not([type="submit"]):not([type="button"]), textarea, select',
         (inputs) => inputs.map((el) => {
@@ -211,6 +262,7 @@ async function processPrepareDraft(job) {
       );
 
       if (fields.length > 0) {
+        await progress(applicationId, user.id, `🤖 Found ${fields.length} field(s) — generating AI answers...`, { fieldCount: fields.length });
         const { fillFormFields } = require('../ai/formFiller');
         const textFields = fields.filter((f) => f.type !== 'file');
         const labels = textFields.map((f) => f.label);
@@ -227,10 +279,10 @@ async function processPrepareDraft(job) {
           }
           const val = generatedAnswers[field.label] || '';
 
-          const isQuestion = field.type === 'textarea' || 
-                             field.label.toLowerCase().includes('why') || 
-                             field.label.toLowerCase().includes('describe') || 
-                             field.label.toLowerCase().includes('tell us') || 
+          const isQuestion = field.type === 'textarea' ||
+                             field.label.toLowerCase().includes('why') ||
+                             field.label.toLowerCase().includes('describe') ||
+                             field.label.toLowerCase().includes('tell us') ||
                              field.label.length > 40;
 
           if (isQuestion) {
@@ -244,11 +296,18 @@ async function processPrepareDraft(job) {
             formData[field.label] = val;
           }
         }
+        await progress(applicationId, user.id, `📝 AI answers generated for ${fields.length} field(s)`, {
+          formFields: Object.keys(formData).length,
+          qaFields: answers.length,
+        });
+      } else {
+        await progress(applicationId, user.id, `ℹ️ No visible form fields found on step ${step + 1}`);
       }
 
       // Check if there is a next step button
       const nextBtn = await targetPage.$('button:has-text("Next"), button:has-text("Continue"), button:has-text("Proceed"), a:has-text("Next"), a:has-text("Continue")');
       if (nextBtn && await nextBtn.isVisible()) {
+        await progress(applicationId, user.id, `➡️ Moving to next form step (${step + 2})...`);
         await nextBtn.click();
         await targetPage.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
         await humanDelay(2000, 3000);
@@ -270,7 +329,7 @@ async function processPrepareDraft(job) {
       },
     });
 
-    await applicationService.logEvent(applicationId, 'Draft preparation completed', {
+    await progress(applicationId, user.id, '✅ Draft preparation complete — ready for review', {
       fieldsFound: Object.keys(formData).length,
       questionsFound: answers.length,
     });
@@ -288,6 +347,7 @@ async function processPrepareDraft(job) {
   }
 }
 
+// ── STAGE 2: Submit Application ───────────────────────────────────────────────
 /**
  * Stage 2: Submission Worker
  * Enters user-edited approved answers and submits the application.
@@ -309,10 +369,22 @@ async function processSubmitApplication(job) {
     if (!application) throw new Error('Application not found');
     const { job: jobRecord, resume, user } = application;
 
-    logger.info(`🚀 Submitting application for ${jobRecord.title} at ${jobRecord.company}`);
+    // ── Fix 2: Enforce daily apply limit before launching browser ────────────
+    const limitCheck = await applicationService.checkDailyLimit(user.id);
+    if (limitCheck.exceeded) {
+      const reason = `Daily apply limit reached (${limitCheck.count}/${limitCheck.limit} today)`;
+      logger.warn(`[AutoApply] ${reason} for ${user.email} — aborting submission`);
+      await applicationService.updateStatus(applicationId, 'system', 'FAILED', {
+        failure_reason: reason,
+      });
+      return { skipped: true, reason };
+    }
+
+    await progress(applicationId, user.id, `🚀 Starting submission for "${jobRecord.title}" at ${jobRecord.company}`);
     await applicationService.updateStatus(applicationId, user.id, 'APPLYING');
 
     // Launch headful Chromium for visual verification / manual intervention if CAPTCHA hits
+    await progress(applicationId, user.id, '🌐 Launching browser and navigating to job page...');
     browser = await launchBrowser(false);
     const page = await browser.newPage();
 
@@ -325,13 +397,14 @@ async function processSubmitApplication(job) {
     let embeddedFrame = page.frames().find(f => {
       const name = f.name() || '';
       const url = f.url() || '';
-      return name === 'mnhembedded' || 
-             url.includes('mynexthire.com') || 
-             url.includes('darwinbox') || 
+      return name === 'mnhembedded' ||
+             url.includes('mynexthire.com') ||
+             url.includes('darwinbox') ||
              url.includes('phenom');
     });
     if (embeddedFrame) {
       targetPage = embeddedFrame;
+      await progress(applicationId, user.id, '🖼️ Embedded careers frame detected — switching context');
     }
 
     // Check for CAPTCHA immediately
@@ -341,16 +414,18 @@ async function processSubmitApplication(job) {
     }
 
     // Click apply button if necessary to open form
+    await progress(applicationId, user.id, '🔍 Locating Apply button...');
     const clickedApply = await scrollAndClickApply(targetPage, (msg) => logger.debug(msg));
     if (clickedApply) {
+      await progress(applicationId, user.id, '✅ Apply button clicked — loading form...');
       await humanDelay(4000, 6000);
       // Re-detect frame context
       const activeFrame = page.frames().find(f => {
         const name = f.name() || '';
         const url = f.url() || '';
-        return name === 'mnhembedded' || 
-               url.includes('mynexthire.com') || 
-               url.includes('darwinbox') || 
+        return name === 'mnhembedded' ||
+               url.includes('mynexthire.com') ||
+               url.includes('darwinbox') ||
                url.includes('phenom');
       });
       if (activeFrame) {
@@ -370,6 +445,8 @@ async function processSubmitApplication(job) {
     const localResumePath = await getLocalResumePath(resume);
 
     while (step < maxSteps) {
+      await progress(applicationId, user.id, `📋 Filling form — step ${step + 1}/${maxSteps}...`);
+
       // Check for CAPTCHA
       if (await detectCaptcha(targetPage)) {
         await handleCaptchaPause(applicationId, user.id, targetPage, browser);
@@ -399,6 +476,7 @@ async function processSubmitApplication(job) {
         }).filter((f) => f !== null && f.label.length > 0)
       );
 
+      let filledCount = 0;
       // Fill visible fields
       for (const field of fields) {
         try {
@@ -415,6 +493,7 @@ async function processSubmitApplication(job) {
             if (localResumePath) {
               await el.setInputFiles(localResumePath);
               await humanDelay(1500, 2000);
+              filledCount++;
             }
             continue;
           }
@@ -430,10 +509,15 @@ async function processSubmitApplication(job) {
               await el.fill(String(value));
             }
             await humanDelay(100, 300);
+            filledCount++;
           }
         } catch (err) {
           logger.warn(`Failed to fill field ${field.label}:`, err.message);
         }
+      }
+
+      if (filledCount > 0) {
+        await progress(applicationId, user.id, `✏️ Filled ${filledCount} field(s) on step ${step + 1}`, { filled: filledCount });
       }
 
       // Buttons
@@ -442,7 +526,7 @@ async function processSubmitApplication(job) {
 
       if (submitBtn && await submitBtn.isVisible() && !(nextBtn && await nextBtn.isVisible())) {
         const prevUrl = targetPage.url();
-        await applicationService.logEvent(applicationId, 'Submitting application form');
+        await progress(applicationId, user.id, '📤 Clicking submit button...');
         await submitBtn.click();
         await targetPage.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {});
         await humanDelay(3000, 5000);
@@ -461,22 +545,25 @@ async function processSubmitApplication(job) {
           break;
         }
       } else if (nextBtn && await nextBtn.isVisible()) {
+        await progress(applicationId, user.id, `➡️ Moving to next step (${step + 2})...`);
         await nextBtn.click();
         await targetPage.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {});
         await humanDelay(1500, 2500);
         step++;
       } else if (submitBtn && await submitBtn.isVisible()) {
+        await progress(applicationId, user.id, '📤 Submitting application (fallback)...');
         await submitBtn.click();
         submitted = true;
         break;
       } else {
+        await progress(applicationId, user.id, `ℹ️ No more fields or buttons found on step ${step + 1}`);
         break;
       }
     }
 
     if (submitted) {
       await applicationService.updateStatus(applicationId, user.id, 'SUBMITTED');
-      await applicationService.logEvent(applicationId, 'Application submitted successfully');
+      await progress(applicationId, user.id, `🎉 Application submitted successfully for "${jobRecord.title}" at ${jobRecord.company}!`);
 
       // Send confirmation notification
       await sendApplied(user.email, user.name, jobRecord);
@@ -497,12 +584,23 @@ async function processSubmitApplication(job) {
   }
 }
 
+// ── CAPTCHA handler ───────────────────────────────────────────────────────────
 async function handleCaptchaPause(applicationId, userId, targetPage, browser) {
   logger.warn(`🚨 CAPTCHA detected during submission for application ${applicationId}`);
 
   await applicationService.updateStatus(applicationId, userId, 'WAITING_FOR_VERIFICATION', {
     failure_reason: 'CAPTCHA detected during submission — solve on careers page to continue',
   });
+
+  // Log a real-time progress event so the UI terminal shows it immediately
+  try {
+    await progress(
+      applicationId,
+      userId,
+      '⚠️ CAPTCHA detected! Please solve it manually on the job site. Application paused.',
+      { action: 'CAPTCHA_PAUSE' }
+    );
+  } catch (_) {}
 
   try {
     const screenshotPath = path.join(os.tmpdir(), `screenshot_captcha_${applicationId}.png`);
@@ -522,6 +620,7 @@ async function handleCaptchaPause(applicationId, userId, targetPage, browser) {
   }
 }
 
+// ── Worker registration ───────────────────────────────────────────────────────
 function registerAutoApplyWorker(queue) {
   queue.process('prepare', 2, processPrepareDraft);
   queue.process('submit', 2, processSubmitApplication);

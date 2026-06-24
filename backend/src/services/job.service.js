@@ -10,12 +10,19 @@ const REQUEST_TIMEOUT = 12000;
 
 // ── LinkedIn Health Tracking ─────────────────────────────────────────────────
 let linkedInFailStreak = 0;
-const LINKEDIN_DEGRADE_THRESHOLD = 3;
+const LINKEDIN_DEGRADE_THRESHOLD = 3; // warn after 3 empty batches
+const LINKEDIN_CIRCUIT_THRESHOLD = 5; // skip LinkedIn entirely after 5
 
 function getLinkedInHealth() {
   return {
     streak: linkedInFailStreak,
-    status: linkedInFailStreak >= LINKEDIN_DEGRADE_THRESHOLD ? 'DEGRADED' : 'OK',
+    status:
+      linkedInFailStreak >= LINKEDIN_CIRCUIT_THRESHOLD
+        ? 'CIRCUIT_OPEN'
+        : linkedInFailStreak >= LINKEDIN_DEGRADE_THRESHOLD
+        ? 'DEGRADED'
+        : 'OK',
+    circuitOpen: linkedInFailStreak >= LINKEDIN_CIRCUIT_THRESHOLD,
   };
 }
 
@@ -198,11 +205,65 @@ function mapRoleToMuseCategory(role = '') {
 
 // ── LinkedIn (Public Guest API) ──────────────────────────────────────────────
 // LinkedIn's guest job search endpoint — no auth or API key required.
+// Uses multiple fallback regex patterns per field to survive minor HTML changes.
+
+/**
+ * Try multiple regex patterns in order, returning the first one that produces results.
+ * @param {string} html - Raw HTML response
+ * @param {Array<RegExp>} patterns - Ordered list of patterns to try
+ * @returns {RegExpMatchArray[]}
+ */
+function tryPatterns(html, patterns) {
+  for (const pattern of patterns) {
+    const matches = [...html.matchAll(pattern)];
+    if (matches.length > 0) return matches;
+  }
+  return [];
+}
 
 async function fetchFromLinkedIn(targetRoles = [], locations = []) {
+  // ── Circuit breaker: if LinkedIn has failed too many times, skip this cycle ──
+  if (linkedInFailStreak >= LINKEDIN_CIRCUIT_THRESHOLD) {
+    logger.warn(
+      `🔴 LINKEDIN_CIRCUIT_OPEN — Skipping LinkedIn fetch this cycle ` +
+      `(fail streak: ${linkedInFailStreak}). Will retry next cycle.`
+    );
+    return [];
+  }
+
   const jobs = [];
   const roles = targetRoles.slice(0, 2);
   const locs = locations.length > 0 ? locations.slice(0, 2) : ['India'];
+
+  // ── Fallback patterns per field (most → least specific) ───────────────────
+  const JOB_ID_PATTERNS = [
+    /data-entity-urn="urn:li:jobPosting:(\d+)"/g,
+    /data-job-id="(\d+)"/g,
+    /jobPosting:(\d+)/g,
+    /\/jobs\/view\/(\d+)/g,
+  ];
+  const TITLE_PATTERNS = [
+    /class="base-search-card__title"[^>]*>\s*(.*?)\s*<\/h3>/gs,
+    /class="job-card-list__title[^"]*"[^>]*>\s*(.*?)\s*<\/a>/gs,
+    /<h3[^>]*class="[^"]*title[^"]*"[^>]*>\s*(.*?)\s*<\/h3>/gs,
+    /aria-label="([^"]{10,100})"/g,
+  ];
+  const COMPANY_PATTERNS = [
+    /class="base-search-card__subtitle"[^>]*>[\s\S]*?<a[^>]*>(.*?)<\/a>/g,
+    /class="job-card-container__company-name"[^>]*>\s*(.*?)\s*<\/span>/g,
+    /class="[^"]*subtitle[^"]*"[^>]*>\s*(.*?)\s*<\/h4>/gs,
+    /data-tracking-control-name="[^"]*company[^"]*"[^>]*>([^<]+)</g,
+  ];
+  const LOCATION_PATTERNS = [
+    /class="job-search-card__location"[^>]*>(.*?)<\/span>/gs,
+    /class="job-card-container__metadata-item[^"]*"[^>]*>(.*?)<\/span>/gs,
+    /class="[^"]*location[^"]*"[^>]*>([^<]{3,60})</g,
+    /data-test-id="job-location"[^>]*>([^<]+)</g,
+  ];
+  const DATE_PATTERNS = [
+    /datetime="([^"]+)"/g,
+    /<time[^>]*>([^<]+)<\/time>/g,
+  ];
 
   for (const role of roles) {
     for (const location of locs) {
@@ -220,19 +281,22 @@ async function fetchFromLinkedIn(targetRoles = [], locations = []) {
               sortBy: 'DD',
             },
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
               'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Cache-Control': 'no-cache',
             },
             timeout: REQUEST_TIMEOUT,
           }
         );
 
-        const jobIdMatches = [...html.matchAll(/data-entity-urn="urn:li:jobPosting:(\d+)"/g)];
-        const titleMatches = [...html.matchAll(/class="base-search-card__title"[^>]*>\s*(.*?)\s*<\/h3>/gs)];
-        const companyMatches = [...html.matchAll(/class="base-search-card__subtitle"[^>]*>[\s\S]*?<a[^>]*>(.*?)<\/a>/g)];
-        const locationMatches = [...html.matchAll(/class="job-search-card__location"[^>]*>(.*?)<\/span>/gs)];
-        const dateMatches = [...html.matchAll(/datetime="([^"]+)"/g)];
+        // Try each set of patterns; use first that yields results
+        const jobIdMatches   = tryPatterns(html, JOB_ID_PATTERNS);
+        const titleMatches   = tryPatterns(html, TITLE_PATTERNS);
+        const companyMatches = tryPatterns(html, COMPANY_PATTERNS);
+        const locationMatches = tryPatterns(html, LOCATION_PATTERNS);
+        const dateMatches    = tryPatterns(html, DATE_PATTERNS);
 
         const count = Math.min(jobIdMatches.length, titleMatches.length);
         for (let i = 0; i < count; i++) {
@@ -249,7 +313,7 @@ async function fetchFromLinkedIn(targetRoles = [], locations = []) {
             company: stripHtml(company || 'Unknown Company'),
             location: stripHtml(jobLocation),
             job_type: jobLocation.toLowerCase().includes('remote') ? 'REMOTE' : 'FULL_TIME',
-            description: `${title} at ${company || 'this company'}. Apply via LinkedIn for full details.`,
+            description: `${stripHtml(title)} at ${stripHtml(company || 'this company')}. Apply via LinkedIn for full details.`,
             requirements: '',
             salary_min: null, salary_max: null,
             apply_url: `https://www.linkedin.com/jobs/view/${jobId}`,
@@ -258,29 +322,38 @@ async function fetchFromLinkedIn(targetRoles = [], locations = []) {
           });
         }
 
-        // ── Health check: track consecutive empty scrape results ─────────────
+        // ── Health tracking ──────────────────────────────────────────────────
         const foundForThisBatch = Math.min(jobIdMatches.length, titleMatches.length);
         if (foundForThisBatch === 0) {
           linkedInFailStreak++;
+          // Only dump HTML snippet at first degradation crossing to avoid log spam
+          const snippetMsg = linkedInFailStreak === LINKEDIN_DEGRADE_THRESHOLD
+            ? ` HTML snippet (first 500 chars): ${html.substring(0, 500).replace(/\s+/g, ' ')}`
+            : '';
           logger.warn(
             `⚠️ LinkedIn: 0 jobs parsed for "${role}" in "${location}" ` +
-            `(fail streak: ${linkedInFailStreak}/${LINKEDIN_DEGRADE_THRESHOLD}). ` +
-            `HTML snippet: ${html.substring(0, 300).replace(/\s+/g, ' ')}`
+            `(fail streak: ${linkedInFailStreak}/${LINKEDIN_CIRCUIT_THRESHOLD}).${snippetMsg}`
           );
-          if (linkedInFailStreak >= LINKEDIN_DEGRADE_THRESHOLD) {
-            logger.warn(
-              '🚨 LINKEDIN_SCRAPE_DEGRADED — LinkedIn HTML structure may have changed. ' +
-              'Manual inspection of the guest search endpoint is required.'
+          if (linkedInFailStreak === LINKEDIN_DEGRADE_THRESHOLD) {
+            logger.warn('🟡 LINKEDIN_SCRAPE_DEGRADED — HTML structure may have changed. Monitoring...');
+          }
+          if (linkedInFailStreak >= LINKEDIN_CIRCUIT_THRESHOLD) {
+            logger.error(
+              '🔴 LINKEDIN_CIRCUIT_OPEN — LinkedIn scraper disabled until next server restart. ' +
+              'Please inspect the guest API endpoint and update regex patterns.'
             );
           }
         } else {
-          // Reset streak on any successful parse
-          linkedInFailStreak = 0;
+          if (linkedInFailStreak > 0) {
+            logger.info(`🟢 LinkedIn scraper recovered after ${linkedInFailStreak} failures.`);
+          }
+          linkedInFailStreak = 0; // Reset on any successful parse
         }
 
         logger.info(`🔗 LinkedIn: found ${foundForThisBatch} jobs for "${role}" in "${location}"`);
         await new Promise((r) => setTimeout(r, 1500));
       } catch (err) {
+        linkedInFailStreak++;
         logger.error(`LinkedIn failed for "${role}" / "${location}":`, err.message);
       }
     }

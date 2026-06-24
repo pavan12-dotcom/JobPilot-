@@ -41,6 +41,7 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
   const [lastUpdated, setLastUpdated] = useState(null);       // Date of last successful fetch
   const [nextRefreshIn, setNextRefreshIn] = useState(REFRESH_INTERVAL_MS); // ms until next auto-refresh
   const [newJobsBanner, setNewJobsBanner] = useState(null);   // { count, timestamp } or null
+  const [applyingBanner, setApplyingBanner] = useState(null); // { title, company } or null
 
   const nextRefreshAt = useRef(Date.now() + REFRESH_INTERVAL_MS);
   const autoRefreshTimer = useRef(null);
@@ -141,19 +142,41 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
       if (job?.title) {
         showToast(`🚀 Status updated: ${status} for ${job.title}`);
       }
+      // Clear applying banner when done
+      if (['SUBMITTED', 'APPLIED', 'FAILED', 'REJECTED', 'WAITING_FOR_VERIFICATION'].includes(status)) {
+        setApplyingBanner(null);
+      }
       loadDashboard(true);
+    };
+
+    const handleLogAdded = (e) => {
+      const { log } = e.detail || {};
+      // Show live banner if this log event signals active application processing
+      if (log?.event) {
+        const msg = log.event.toLowerCase();
+        if (msg.includes('launching') || msg.includes('navigating') || msg.includes('filling') || msg.includes('submitting')) {
+          // Extract job info from a previously stored application if possible
+          setApplyingBanner((prev) => prev || { message: log.event });
+        }
+        if (msg.includes('submitted successfully') || msg.includes('failed') || msg.includes('captcha')) {
+          // Auto-dismiss after 5 seconds on terminal completion events
+          setTimeout(() => setApplyingBanner(null), 5000);
+        }
+      }
     };
 
     window.addEventListener('jobpilot:jobs-refreshed', handleJobsRefreshed);
     window.addEventListener('jobpilot:stats-updated', handleStatsUpdated);
     window.addEventListener('jobpilot:job-matched', handleJobMatched);
     window.addEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+    window.addEventListener('jobpilot:application-log-added', handleLogAdded);
 
     return () => {
       window.removeEventListener('jobpilot:jobs-refreshed', handleJobsRefreshed);
       window.removeEventListener('jobpilot:stats-updated', handleStatsUpdated);
       window.removeEventListener('jobpilot:job-matched', handleJobMatched);
       window.removeEventListener('jobpilot:application-status-updated', handleStatusUpdated);
+      window.removeEventListener('jobpilot:application-log-added', handleLogAdded);
     };
   }, [loadDashboard, showToast]);
 
@@ -218,6 +241,37 @@ export default function HomeScreen({ goTo, user, showToast, setSelectedJob }) {
           <button
             style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 4 }}
             onClick={(e) => { e.stopPropagation(); setNewJobsBanner(null); }}
+          >✕</button>
+        </div>
+      )}
+
+      {/* Applying In Progress Banner */}
+      {applyingBanner && (
+        <div
+          style={{
+            margin: '8px 20px 0',
+            background: 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(249,115,22,0.08))',
+            border: '1px solid rgba(251,191,36,0.3)',
+            borderRadius: 12,
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            animation: 'slideDown 0.4s ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#FCD34D', animation: 'ping 1.2s infinite', display: 'inline-block' }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#FCD34D' }}>Autopilot is applying…</div>
+              <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 1, maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {applyingBanner.message || 'Browser automation in progress'}
+              </div>
+            </div>
+          </div>
+          <button
+            style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16, padding: 4 }}
+            onClick={() => setApplyingBanner(null)}
           >✕</button>
         </div>
       )}

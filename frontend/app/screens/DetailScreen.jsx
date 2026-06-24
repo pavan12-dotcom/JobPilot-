@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { jobsApi, applicationsApi } from '@/lib/api';
 import { getSourceLabel } from '@/lib/sourceLabels';
 
@@ -28,9 +28,10 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
   const [saved, setSaved] = useState(selectedJob?.is_saved || false);
   const [logs, setLogs] = useState([]);
   const [appStatus, setAppStatus] = useState(app.status || null);
+  const terminalRef = useRef(null);
 
-  const tabs = app.id 
-    ? ['About', 'Requirements', 'ATS Report', 'App Logs', 'Company'] 
+  const tabs = app.id
+    ? ['About', 'Requirements', 'ATS Report', 'App Logs', 'Company']
     : ['About', 'Requirements', 'ATS Report', 'Company'];
 
   useEffect(() => {
@@ -41,6 +42,13 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
       }).catch(() => {});
     }
   }, [app.id]);
+
+  // Auto-scroll terminal to bottom whenever new logs arrive
+  useEffect(() => {
+    if (terminalRef.current) {
+      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   useEffect(() => {
     if (!app.id) return;
@@ -406,61 +414,88 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
           {/* App Logs tab */}
           {activeTab === 'App Logs' && (
             <div>
-              <div className="ds-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Application Progress</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lime)', background: 'var(--lime-dim)', border: '1px solid var(--border2)', padding: '3px 10px', borderRadius: 999 }}>
-                  {appStatus}
+              {/* Stage progress bar */}
+              <AppStageProgress status={appStatus} />
+
+              <div className="ds-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+                <span>Automation Console</span>
+                <span style={{
+                  fontSize: 10, fontWeight: 700,
+                  color: STATUS_META[appStatus]?.color || 'var(--text3)',
+                  background: STATUS_META[appStatus]?.bg || 'var(--bg2)',
+                  border: `1px solid ${STATUS_META[appStatus]?.border || 'var(--border)'}`,
+                  padding: '3px 10px', borderRadius: 999,
+                  display: 'flex', alignItems: 'center', gap: 5
+                }}>
+                  {['APPLYING', 'QUEUED'].includes(appStatus) && (
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: STATUS_META[appStatus]?.color, animation: 'ping 1.2s infinite' }} />
+                  )}
+                  {appStatus || 'Unknown'}
                 </span>
               </div>
-              
+
               {/* Terminal View */}
-              <div style={{
-                background: '#0B0B0F',
-                border: '1.5px solid var(--border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '16px',
-                fontFamily: 'Courier New, monospace',
-                fontSize: '11px',
-                color: '#D1D5DB',
-                minHeight: '220px',
-                maxHeight: '350px',
-                overflowY: 'auto',
-                boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.5)',
-                marginBottom: '20px'
-              }}>
+              <div
+                ref={terminalRef}
+                style={{
+                  background: '#0B0B0F',
+                  border: '1.5px solid var(--border)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px',
+                  fontFamily: 'Courier New, monospace',
+                  fontSize: '11px',
+                  color: '#D1D5DB',
+                  minHeight: '220px',
+                  maxHeight: '350px',
+                  overflowY: 'auto',
+                  boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.5)',
+                  marginBottom: '20px',
+                  scrollBehavior: 'smooth',
+                }}
+              >
                 <div style={{ color: '#4ADE80', fontWeight: 'bold', marginBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80', animation: appStatus === 'APPLYING' || appStatus === 'QUEUED' ? 'ping 1.2s infinite' : 'none' }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ADE80', animation: ['APPLYING', 'QUEUED'].includes(appStatus) ? 'ping 1.2s infinite' : 'none' }} />
                   <span>JOBPILOT AUTOMATION CONSOLE</span>
                 </div>
-                
+
                 {logs.length === 0 ? (
                   <div style={{ color: 'var(--text3)', fontStyle: 'italic', padding: '12px 0' }}>
-                    Initializing connection... Log stream will start shortly.
+                    {['APPLYING', 'QUEUED'].includes(appStatus)
+                      ? 'Initializing automation engine... Log stream will start shortly.'
+                      : 'No automation logs available.'}
                   </div>
                 ) : (
-                  logs.map((logLine, idx) => (
-                    <div key={logLine.id || idx} style={{ marginBottom: '6px', lineHeight: '1.4' }}>
-                      <span style={{ color: 'var(--lime)', marginRight: '6px' }}>&gt;</span>
-                      <span style={{ color: '#888', marginRight: '6px' }}>
-                        [{new Date(logLine.created_at).toLocaleTimeString()}]
-                      </span>
-                      <span>{logLine.event}</span>
-                      {logLine.metadata && Object.keys(logLine.metadata).length > 0 && (
-                        <div style={{ color: '#6B7280', fontSize: '10px', paddingLeft: '14px', marginTop: '2px' }}>
-                          {JSON.stringify(logLine.metadata)}
-                        </div>
-                      )}
-                      {logLine.screenshot_url && (
-                        <div style={{ marginTop: '6px', paddingLeft: '14px' }}>
-                          <img 
-                            src={logLine.screenshot_url} 
-                            alt="Log Screenshot" 
-                            style={{ maxWidth: '100%', borderRadius: '6px', border: '1px solid #374151' }} 
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))
+                  <>
+                    {logs.map((logLine, idx) => (
+                      <div key={logLine.id || idx} style={{ marginBottom: '6px', lineHeight: '1.4' }}>
+                        <span style={{ color: 'var(--lime)', marginRight: '6px' }}>&gt;</span>
+                        <span style={{ color: '#888', marginRight: '6px' }}>
+                          [{new Date(logLine.created_at).toLocaleTimeString()}]
+                        </span>
+                        <span>{logLine.event}</span>
+                        {logLine.metadata && Object.keys(logLine.metadata).length > 0 && (
+                          <div style={{ color: '#6B7280', fontSize: '10px', paddingLeft: '14px', marginTop: '2px' }}>
+                            {JSON.stringify(logLine.metadata)}
+                          </div>
+                        )}
+                        {logLine.screenshot_url && (
+                          <div style={{ marginTop: '6px', paddingLeft: '14px' }}>
+                            <img
+                              src={logLine.screenshot_url}
+                              alt="Log Screenshot"
+                              style={{ maxWidth: '100%', borderRadius: '6px', border: '1px solid #374151' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {/* Blinking cursor when active */}
+                    {['APPLYING', 'QUEUED'].includes(appStatus) && (
+                      <div style={{ color: '#4ADE80', marginTop: 4 }}>
+                        <span style={{ animation: 'blink 1s step-end infinite' }}>█</span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
               <div className="sp" />
@@ -518,7 +553,107 @@ export default function DetailScreen({ back, showToast, selectedJob }) {
           ) : '🚀 Apply now'}
         </button>
       </div>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes ping{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.5)}}
+        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+      `}</style>
+    </div>
+  );
+}
+
+// ── Stage Progress Bar ────────────────────────────────────────────────────────
+const STAGES = [
+  { key: 'queued',     label: 'Queued',     statuses: ['QUEUED', 'DRAFT'] },
+  { key: 'preparing', label: 'Preparing',   statuses: ['APPLYING'] },
+  { key: 'filling',   label: 'Filling',     statuses: ['READY_FOR_REVIEW'] },
+  { key: 'submitting',label: 'Submitting',  statuses: ['SUBMITTED', 'APPLIED'] },
+  { key: 'done',      label: 'Done',        statuses: ['SUBMITTED', 'APPLIED', 'HIRED', 'OFFER', 'INTERVIEW'] },
+];
+
+const STATUS_META = {
+  QUEUED:                { color: '#93C5FD', bg: 'rgba(96,165,250,0.1)',   border: 'rgba(96,165,250,0.2)' },
+  DRAFT:                 { color: '#D1D5DB', bg: 'rgba(209,213,219,0.1)',  border: 'rgba(209,213,219,0.2)' },
+  APPLYING:              { color: '#FCD34D', bg: 'rgba(251,191,36,0.1)',   border: 'rgba(251,191,36,0.2)' },
+  READY_FOR_REVIEW:      { color: '#FB923C', bg: 'rgba(249,115,22,0.1)',   border: 'rgba(249,115,22,0.2)' },
+  SUBMITTED:             { color: '#4ADE80', bg: 'rgba(34,197,94,0.1)',    border: 'rgba(34,197,94,0.2)' },
+  APPLIED:               { color: '#4ADE80', bg: 'rgba(34,197,94,0.1)',    border: 'rgba(34,197,94,0.2)' },
+  FAILED:                { color: '#FCA5A5', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)' },
+  WAITING_FOR_VERIFICATION: { color: '#FDBA74', bg: 'rgba(251,146,60,0.1)', border: 'rgba(251,146,60,0.2)' },
+  INTERVIEW:             { color: '#86EFAC', bg: 'rgba(74,222,128,0.1)',   border: 'rgba(74,222,128,0.2)' },
+  OFFER:                 { color: '#6EE7B7', bg: 'rgba(52,211,153,0.1)',   border: 'rgba(52,211,153,0.2)' },
+  REJECTED:              { color: '#FCA5A5', bg: 'rgba(248,113,113,0.1)',  border: 'rgba(248,113,113,0.2)' },
+};
+
+function getStageIndex(status) {
+  if (!status) return -1;
+  if (['FAILED', 'REJECTED', 'WITHDRAWN'].includes(status)) return -1; // failed
+  for (let i = STAGES.length - 1; i >= 0; i--) {
+    if (STAGES[i].statuses.includes(status)) return i;
+  }
+  return 0;
+}
+
+function AppStageProgress({ status }) {
+  const isFailed = ['FAILED', 'REJECTED', 'WITHDRAWN', 'WAITING_FOR_VERIFICATION'].includes(status);
+  const currentIdx = getStageIndex(status);
+
+  if (!status) return null;
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {isFailed ? (
+        <div style={{
+          background: 'rgba(248,113,113,0.08)',
+          border: '1px solid rgba(248,113,113,0.2)',
+          borderRadius: 10, padding: '10px 14px',
+          display: 'flex', alignItems: 'center', gap: 10
+        }}>
+          <span style={{ fontSize: 16 }}>{status === 'WAITING_FOR_VERIFICATION' ? '⚠️' : '❌'}</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#FCA5A5' }}>
+              {status === 'WAITING_FOR_VERIFICATION' ? 'CAPTCHA — Manual Action Required' : 'Application Failed'}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>Check the log below for details</div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '0 2px' }}>
+          {STAGES.map((stage, i) => {
+            const isDone = i <= currentIdx;
+            const isActive = i === currentIdx;
+            return (
+              <>
+                <div key={stage.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: '50%',
+                    background: isDone ? 'var(--lime)' : 'var(--bg3)',
+                    border: `2px solid ${isActive ? 'var(--lime)' : isDone ? 'var(--lime)' : 'var(--border)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: isActive ? '0 0 8px rgba(225,62,62,0.5)' : 'none',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                  }}>
+                    {isDone && !isActive && <span style={{ fontSize: 10, color: 'var(--bg)' }}>✓</span>}
+                    {isActive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--bg)', animation: 'ping 1.2s infinite' }} />}
+                  </div>
+                  <div style={{ fontSize: 8, fontWeight: 600, color: isDone ? 'var(--lime)' : 'var(--text3)', marginTop: 4, textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {stage.label}
+                  </div>
+                </div>
+                {i < STAGES.length - 1 && (
+                  <div key={`line-${i}`} style={{
+                    height: 2, flex: 1,
+                    background: i < currentIdx ? 'var(--lime)' : 'var(--border)',
+                    marginBottom: 18,
+                    transition: 'background 0.3s ease',
+                  }} />
+                )}
+              </>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
