@@ -1,6 +1,7 @@
 // src/queues/autoApply.queue.js
 const Bull = require('bull');
 const env = require('../config/env');
+const { getRedisConfig } = require('./redis.config');
 const logger = require('../utils/logger');
 
 let autoApplyQueue = null;
@@ -9,7 +10,7 @@ function getAutoApplyQueue() {
   if (autoApplyQueue) return autoApplyQueue;
 
   autoApplyQueue = new Bull('auto-apply', {
-    redis: env.REDIS_URL,
+    redis: getRedisConfig(),
     defaultJobOptions: {
       attempts: 2,
       backoff: { type: 'fixed', delay: 10000 },

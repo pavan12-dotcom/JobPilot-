@@ -1,6 +1,7 @@
 // src/queues/jobFetch.queue.js
 const Bull = require('bull');
 const env = require('../config/env');
+const { getRedisConfig } = require('./redis.config');
 const logger = require('../utils/logger');
 
 let jobFetchQueue = null;
@@ -9,7 +10,7 @@ function getJobFetchQueue() {
   if (jobFetchQueue) return jobFetchQueue;
 
   jobFetchQueue = new Bull('job-fetch', {
-    redis: env.REDIS_URL,
+    redis: getRedisConfig(),
     defaultJobOptions: {
       attempts: 3,
       backoff: { type: 'exponential', delay: 5000 },
@@ -24,16 +25,30 @@ function getJobFetchQueue() {
   return jobFetchQueue;
 }
 
-// Schedule periodic job fetching (every hour)
+// Schedule periodic job fetching (every hour) + immediate run on startup
 async function schedulePeriodicFetch() {
   const queue = getJobFetchQueue();
 
-  // Add repeating job
+  // ── Immediate startup fetch ───────────────────────────────────────────────
+  // Runs 5 seconds after boot so all workers are registered before processing.
+  // The unique jobId prevents duplicate startup jobs on repeated fast restarts.
+  await queue.add(
+    'fetch',
+    { type: 'all-users' },
+    {
+      delay: 5000,
+      jobId: `startup-fetch-${Math.floor(Date.now() / 60000)}`, // unique per minute
+      attempts: 2,
+    },
+  );
+  logger.info('🚀 Startup job fetch queued (fires in ~5s)');
+
+  // ── Hourly repeating fetch ────────────────────────────────────────────────
   await queue.add(
     'periodic-fetch',
     { type: 'all-users' },
     {
-      repeat: { cron: '0 * * * *' }, // Every hour
+      repeat: { cron: '0 * * * *' }, // Every hour at :00
       jobId: 'periodic-fetch',
     },
   );
@@ -42,3 +57,4 @@ async function schedulePeriodicFetch() {
 }
 
 module.exports = { getJobFetchQueue, schedulePeriodicFetch, get jobFetchQueue() { return getJobFetchQueue(); } };
+

@@ -1,6 +1,7 @@
 // src/queues/jobMatch.queue.js
 const Bull = require('bull');
 const env = require('../config/env');
+const { getRedisConfig } = require('./redis.config');
 const logger = require('../utils/logger');
 
 let jobMatchQueue = null;
@@ -9,7 +10,7 @@ function getJobMatchQueue() {
   if (jobMatchQueue) return jobMatchQueue;
 
   jobMatchQueue = new Bull('job-match', {
-    redis: env.REDIS_URL,
+    redis: getRedisConfig(),
     defaultJobOptions: {
       attempts: 2,
       backoff: { type: 'fixed', delay: 3000 },
